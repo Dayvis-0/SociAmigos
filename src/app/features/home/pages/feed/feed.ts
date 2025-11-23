@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CreatePostModalComponent } from '../../components/create-post-modal/create-post-modal';
+import { CommentSectionComponent } from '../../components/comment-section/comment-section';
 import { NavbarComponent } from '../../../../shared/components/navbar/navbar';
 import { SidebarLeftComponent } from '../../../../shared/components/sidebar-left/sidebar-left';
 import { SidebarRightComponent } from '../../../../shared/components/sidebar-right/sidebar-right';
@@ -25,12 +27,16 @@ interface Post {
     CommonModule,
     NavbarComponent,
     SidebarLeftComponent,
-    SidebarRightComponent
+    SidebarRightComponent,
+    CreatePostModalComponent,
+    CommentSectionComponent
   ],
   templateUrl: './feed.html',
   styleUrl: './feed.css'
 })
 export class FeedComponent {
+  @ViewChild(CreatePostModalComponent) createPostModal!: CreatePostModalComponent;
+
   posts: Post[] = [
     {
       id: 1,
@@ -84,14 +90,31 @@ export class FeedComponent {
     }
   ];
 
+  openCreatePostModal(): void {
+    this.createPostModal.open();
+  }
+
+  onPublishPost(content: string): void {
+    const newPost: Post = {
+      id: Date.now(),
+      author: 'María González',
+      initials: 'MG',
+      time: 'Justo ahora',
+      content: content,
+      hasImage: false,
+      likes: 0,
+      comments: 0,
+      liked: false,
+      avatarClass: ''
+    };
+    
+    this.posts.unshift(newPost);
+    console.log('Nueva publicación creada:', newPost);
+  }
+
   toggleLike(post: Post): void {
     post.liked = !post.liked;
     post.likes += post.liked ? 1 : -1;
-  }
-
-  onComment(post: Post): void {
-    console.log('Comentar en post:', post.id);
-    alert('Función de comentarios en desarrollo');
   }
 
   onEdit(post: Post): void {

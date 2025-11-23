@@ -6,7 +6,7 @@
   <main class="feed">
     <!-- CREATE POST -->
     <div class="create-post">
-      <div class="create-post-input">
+      <div class="create-post-input" (click)="openCreatePostModal()">
         <div class="create-post-avatar">MG</div>
         <input 
           type="text" 
@@ -50,7 +50,7 @@
           <span>{{ post.liked ? '❤️' : '🤍' }}</span>
           <span>Me gusta</span>
         </button>
-        <button class="post-action" (click)="onComment(post)">
+        <button class="post-action">
           <span>💬</span>
           <span>Comentar</span>
         </button>
@@ -59,8 +59,17 @@
           <span>Editar</span>
         </button>
       </div>
+
+      <!-- COMMENT SECTION -->
+      <app-comment-section 
+        [postId]="post.id" 
+        [commentsCount]="post.comments"
+      ></app-comment-section>
     </article>
   </main>
 
   <app-sidebar-right></app-sidebar-right>
 </div>
+
+<!-- CREATE POST MODAL -->
+<app-create-post-modal (publishPost)="onPublishPost($event)"></app-create-post-modal>

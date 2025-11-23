@@ -1,0 +1,252 @@
+/* SECCIÓN DE COMENTARIOS */
+
+.comments-section {
+  padding: 0 16px 12px;
+  border-top: 1px solid #e4e6eb;
+  margin-top: 8px;
+}
+
+/* Botón Ver Comentarios */
+.view-comments-btn {
+  background: transparent;
+  border: none;
+  color: #65676b;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.view-comments-btn:hover {
+  color: #050505;
+  text-decoration: underline;
+}
+
+/* Contenedor de Comentarios */
+.comments-container {
+  margin-top: 12px;
+}
+
+/* Item de Comentario */
+.comment-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.comment-item.reply {
+  margin-left: 40px;
+  margin-top: 8px;
+}
+
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* Contenido del Comentario */
+.comment-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-bubble {
+  background: #f0f2f5;
+  border-radius: 18px;
+  padding: 8px 12px;
+  display: inline-block;
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.comment-author {
+  font-weight: 600;
+  font-size: 13px;
+  color: #050505;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.comment-text {
+  font-size: 15px;
+  color: #050505;
+  margin: 0;
+  line-height: 1.3333;
+}
+
+/* Acciones del Comentario */
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  padding-left: 12px;
+  font-size: 12px;
+}
+
+.comment-like-btn,
+.comment-reply-btn {
+  background: transparent;
+  border: none;
+  color: #65676b;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  transition: color 0.2s;
+}
+
+.comment-like-btn:hover,
+.comment-reply-btn:hover {
+  text-decoration: underline;
+}
+
+.comment-like-btn.liked {
+  color: #1877f2;
+}
+
+.comment-time {
+  color: #65676b;
+  font-size: 12px;
+}
+
+.comment-likes {
+  color: #65676b;
+  font-size: 12px;
+}
+
+/* Respuestas */
+.comment-replies {
+  margin-top: 8px;
+}
+
+/* Formulario Agregar Comentario */
+.add-comment-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding-top: 8px;
+}
+
+.comment-input-wrapper {
+  flex: 1;
+  background: #f0f2f5;
+  border-radius: 20px;
+  padding: 8px 12px;
+  position: relative;
+}
+
+.comment-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: #050505;
+  font-family: inherit;
+  padding-right: 120px;
+}
+
+.comment-input::placeholder {
+  color: #65676b;
+}
+
+.comment-input-actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+}
+
+.emoji-btn,
+.attach-btn,
+.gif-btn,
+.sticker-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.emoji-btn:hover,
+.attach-btn:hover,
+.gif-btn:hover,
+.sticker-btn:hover {
+  background: #e4e6eb;
+}
+
+.gif-btn {
+  font-size: 11px;
+  font-weight: 700;
+  color: #65676b;
+}
+
+/* Animación al mostrar comentarios */
+.comments-container.show {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .comment-item.reply {
+    margin-left: 32px;
+  }
+  
+  .comment-input {
+    padding-right: 100px;
+  }
+  
+  .comment-input-actions {
+    gap: 2px;
+  }
+  
+  .emoji-btn,
+  .attach-btn,
+  .gif-btn,
+  .sticker-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+}
+
+/* Estado cuando se está escribiendo */
+.comment-input:focus {
+  outline: none;
+}
+
+.comment-input-wrapper:focus-within {
+  background: #e4e6eb;
+}

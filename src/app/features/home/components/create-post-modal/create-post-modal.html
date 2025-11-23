@@ -1,0 +1,44 @@
+<div class="modal-overlay" [class.active]="isOpen" (click)="close()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Crear publicación</h2>
+      <button class="close-modal-btn" (click)="close()">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="user-info-modal">
+        <div class="modal-user-avatar">MG</div>
+        <span class="modal-user-name">María González</span>
+      </div>
+      
+      <textarea 
+        class="post-textarea" 
+        placeholder="¿Qué está pasando?"
+        [(ngModel)]="postContent"
+        #textarea
+      ></textarea>
+      
+      <div class="post-options">
+        <button class="option-btn" title="Agregar foto" (click)="onPhotoClick()">
+          📷 Foto/Video
+        </button>
+        <button class="option-btn" title="Sentimiento" (click)="onFeelingClick()">
+          😊 Sentimiento
+        </button>
+        <button class="option-btn" title="Ubicación" (click)="onLocationClick()">
+          📍 Ubicación
+        </button>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button 
+        class="publish-btn"
+        [disabled]="isPublishDisabled"
+        (click)="onPublish()"
+      >
+        Publicar
+      </button>
+    </div>
+  </div>
+</div>
