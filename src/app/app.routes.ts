@@ -17,5 +17,9 @@ export const routes: Routes = [
   {
     path: 'profile',
     loadChildren: () => import('./features/profile/profile.routes').then(m => m.profileRoutes)
+  },
+  {
+    path: 'friends',
+    loadChildren: () => import('./features/friends/friends.routes').then(m => m.friendsRoutes)
   }
 ];

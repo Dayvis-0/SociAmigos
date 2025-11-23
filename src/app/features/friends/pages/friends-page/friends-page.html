@@ -1,4 +1,61 @@
+<app-navbar></app-navbar>
+
 <div class="friends-container">
-    <app-friends-header></app-friends-header>
-    <app-friends-list></app-friends-list>
+  <div class="friends-header">
+    <h1>Amigos</h1>
+    <div class="friends-tabs">
+      <div 
+        *ngFor="let tab of tabs"
+        class="friends-tab"
+        [class.active]="activeTab === tab.id"
+        (click)="onTabChange(tab.id)">
+        {{ tab.label }}
+      </div>
+    </div>
+  </div>
+
+  <div class="friends-content">
+    <main class="friends-main">
+      <div class="friends-main-header">
+        <div>
+          <div class="friends-main-title">{{ filteredFriends.length }} amigos</div>
+          <div class="friends-count">Ordenados por: Nombre</div>
+        </div>
+        <input 
+          type="text" 
+          class="friends-search" 
+          placeholder="Buscar amigos"
+          [(ngModel)]="searchQuery">
+      </div>
+
+      <div class="friends-grid">
+        <div class="friend-card" *ngFor="let friend of filteredFriends">
+          <div class="friend-card-avatar" [style.background]="friend.gradient">
+            {{ friend.initials }}
+          </div>
+          <div class="friend-card-info">
+            <div class="friend-card-name">{{ friend.name }}</div>
+            <div class="friend-card-mutual">{{ friend.mutualFriends }} amigos en común</div>
+            <div class="friend-card-actions">
+              <button 
+                class="friend-card-btn primary"
+                (click)="onFriendsClick(friend)">
+                Amigos
+              </button>
+              <button 
+                class="friend-card-btn secondary"
+                (click)="onMessageClick(friend)">
+                Mensaje
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mensaje cuando no hay resultados -->
+      <div *ngIf="filteredFriends.length === 0" class="no-results">
+        <p>No se encontraron amigos con ese nombre</p>
+      </div>
+    </main>
+  </div>
 </div>
