@@ -9,5 +9,9 @@ export const routes: Routes = [
   {
     path: 'auth',
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.authRoutes)
+  },
+  {
+    path: 'feed',
+    loadChildren: () => import('./features/home/home.routes').then(m => m.homeRoutes)
   }
 ];
