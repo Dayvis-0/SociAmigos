@@ -92,26 +92,41 @@ export class FeedComponent {
     }
   ];
 
+  private editingPostId: number | null = null;
+
   openCreatePostModal(): void {
+    this.editingPostId = null;
     this.createPostModal.open();
   }
 
   onPublishPost(content: string): void {
-    const newPost: Post = {
-      id: Date.now(),
-      author: 'María González',
-      initials: 'MG',
-      time: 'Justo ahora',
-      content: content,
-      hasImage: false,
-      likes: 0,
-      comments: 0,
-      liked: false,
-      avatarClass: ''
-    };
-    
-    this.posts.unshift(newPost);
-    console.log('Nueva publicación creada:', newPost);
+    if (this.editingPostId) {
+      // Editar post existente
+      const postIndex = this.posts.findIndex(p => p.id === this.editingPostId);
+      if (postIndex !== -1) {
+        this.posts[postIndex].content = content;
+        this.posts[postIndex].time = 'Editado justo ahora';
+        console.log('Publicación editada:', this.posts[postIndex]);
+      }
+      this.editingPostId = null;
+    } else {
+      // Crear nuevo post
+      const newPost: Post = {
+        id: Date.now(),
+        author: 'María González',
+        initials: 'MG',
+        time: 'Justo ahora',
+        content: content,
+        hasImage: false,
+        likes: 0,
+        comments: 0,
+        liked: false,
+        avatarClass: ''
+      };
+      
+      this.posts.unshift(newPost);
+      console.log('Nueva publicación creada:', newPost);
+    }
   }
 
   toggleLike(post: Post): void {
@@ -120,7 +135,8 @@ export class FeedComponent {
   }
 
   onEdit(post: Post): void {
-    console.log('Editar post:', post.id);
-    alert('Función de editar en desarrollo');
+    this.editingPostId = post.id;
+    this.createPostModal.open(post.content);
+    console.log('Editando post:', post.id);
   }
 }

@@ -1,7 +1,7 @@
 <div class="modal-overlay" [class.active]="isOpen" (click)="close()">
   <div class="modal-container" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>Crear publicación</h2>
+      <h2>{{ modalTitle }}</h2>
       <button class="close-modal-btn" (click)="close()">&times;</button>
     </div>
     
@@ -22,9 +22,6 @@
         <button class="option-btn" title="Agregar foto" (click)="onPhotoClick()">
           📷 Foto/Video
         </button>
-        <button class="option-btn" title="Sentimiento" (click)="onFeelingClick()">
-          😊 Sentimiento
-        </button>
         <button class="option-btn" title="Ubicación" (click)="onLocationClick()">
           📍 Ubicación
         </button>
@@ -32,12 +29,8 @@
     </div>
     
     <div class="modal-footer">
-      <button 
-        class="publish-btn"
-        [disabled]="isPublishDisabled"
-        (click)="onPublish()"
-      >
-        Publicar
+      <button class="publish-btn" [disabled]="isPublishDisabled" (click)="onPublish()">
+        {{ publishButtonText }}
       </button>
     </div>
   </div>

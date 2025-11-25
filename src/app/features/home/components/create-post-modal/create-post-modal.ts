@@ -15,15 +15,23 @@ export class CreatePostModalComponent {
   
   isOpen = false;
   postContent = '';
+  isEditMode = false;
 
-  open(): void {
+  open(content?: string): void {
     this.isOpen = true;
-    this.postContent = '';
+    if (content) {
+      this.postContent = content;
+      this.isEditMode = true;
+    } else {
+      this.postContent = '';
+      this.isEditMode = false;
+    }
   }
 
   close(): void {
     this.isOpen = false;
     this.postContent = '';
+    this.isEditMode = false;
     this.closeModal.emit();
   }
 
@@ -38,15 +46,19 @@ export class CreatePostModalComponent {
     alert('Función de agregar foto/video en desarrollo');
   }
 
-  onFeelingClick(): void {
-    alert('Función de agregar sentimiento en desarrollo');
-  }
-
   onLocationClick(): void {
     alert('Función de agregar ubicación en desarrollo');
   }
 
   get isPublishDisabled(): boolean {
     return this.postContent.trim().length === 0;
+  }
+
+  get modalTitle(): string {
+    return this.isEditMode ? 'Editar publicación' : 'Crear publicación';
+  }
+
+  get publishButtonText(): string {
+    return this.isEditMode ? 'Actualizar' : 'Publicar';
   }
 }
