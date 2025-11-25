@@ -5,6 +5,7 @@ import { CommentSectionComponent } from '../../components/comment-section/commen
 import { NavbarComponent } from '../../../../shared/components/navbar/navbar';
 import { SidebarLeftComponent } from '../../../../shared/components/sidebar-left/sidebar-left';
 import { SidebarRightComponent } from '../../../../shared/components/sidebar-right/sidebar-right';
+import { LikeButtonComponent } from '../../components/like-button/like-button';
 
 interface Post {
   id: number;
@@ -29,7 +30,8 @@ interface Post {
     SidebarLeftComponent,
     SidebarRightComponent,
     CreatePostModalComponent,
-    CommentSectionComponent
+    CommentSectionComponent,
+    LikeButtonComponent
   ],
   templateUrl: './feed.html',
   styleUrl: './feed.css'

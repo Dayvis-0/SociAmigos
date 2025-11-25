@@ -36,24 +36,13 @@
         {{ post.imageEmoji }}
       </div>
 
-      <div class="post-stats">
-        <span>❤️ {{ post.likes }} Me gusta</span>
-        <span>{{ post.comments }} Comentarios</span>
-      </div>
-
       <div class="post-actions">
-        <button 
-          class="post-action" 
-          [class.liked]="post.liked"
-          (click)="toggleLike(post)"
-        >
-          <span>{{ post.liked ? '❤️' : '🤍' }}</span>
-          <span>Me gusta</span>
-        </button>
-        <button class="post-action">
-          <span>💬</span>
-          <span>Comentar</span>
-        </button>
+        <app-like-button
+          [liked]="post.liked"
+          [likesCount]="post.likes"
+          [showCount]="false"
+          (likeToggle)="toggleLike(post)"
+        ></app-like-button>
         <button class="post-action" (click)="onEdit(post)">
           <span>✏️</span>
           <span>Editar</span>

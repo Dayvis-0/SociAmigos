@@ -1,0 +1,9 @@
+<button 
+  class="like-button" 
+  [class.liked]="liked"
+  (click)="onLikeClick()"
+>
+  <span class="like-icon">{{ liked ? '❤️' : '🤍' }}</span>
+  <span class="like-text">Me gusta</span>
+  <span *ngIf="showCount && likesCount > 0" class="like-count">({{ likesCount }})</span>
+</button>

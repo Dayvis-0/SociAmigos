@@ -159,6 +159,7 @@
   gap: 8px;
 }
 
+/* Estilos para botones normales (Comentar, Editar) */
 .post-action {
   flex: 1;
   padding: 10px;
@@ -180,8 +181,9 @@
   background: var(--light-bg);
 }
 
-.post-action.liked {
-  color: var(--primary-action-color);
+/* Estilos para el componente like-button */
+.post-actions app-like-button {
+  flex: 1;
 }
 
 /* --- RESPONSIVE --- */
