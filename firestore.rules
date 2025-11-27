@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar autenticación
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función para verificar si el usuario es el propietario
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Reglas para la colección de usuarios
+    match /users/{userId} {
+      // Cualquiera autenticado puede leer perfiles
+      allow read: if isAuthenticated();
+      
+      // Solo el propietario puede crear/actualizar su perfil
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      
+      // No se permite eliminar usuarios (opcional - ajustar según necesidad)
+      allow delete: if isOwner(userId);
+    }
+    
+    // Reglas para la colección de publicaciones
+    match /publicaciones/{postId} {
+      // Cualquiera autenticado puede leer publicaciones
+      allow read: if isAuthenticated();
+      
+      // Solo usuarios autenticados pueden crear publicaciones
+      allow create: if isAuthenticated() && request.resource.data.autorId == request.auth.uid;
+      
+      // Solo el autor puede actualizar/eliminar su publicación
+      allow update, delete: if isAuthenticated() && resource.data.autorId == request.auth.uid;
+      
+      // Reglas para subcolección de comentarios
+      match /comentarios/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.autorId == request.auth.uid;
+        allow update, delete: if isAuthenticated() && resource.data.autorId == request.auth.uid;
+      }
+    }
+    
+    // Reglas para la colección de likes
+    match /likes/{likeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Denegar acceso por defecto a todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

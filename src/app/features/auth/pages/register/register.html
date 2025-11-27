@@ -6,6 +6,16 @@
 
     <form class="register-form" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
       
+      <!-- ERROR MESSAGE -->
+      <div class="alert alert-error" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <!-- LOADING INDICATOR -->
+      <div class="alert alert-info" *ngIf="loading$ | async">
+        Creando tu cuenta...
+      </div>
+
       <!-- NOMBRE Y APELLIDO -->
       <div class="name-fields">
         <div class="name-field-wrapper">
@@ -15,6 +25,7 @@
             formControlName="firstName"
             placeholder="Nombre"
             [class.error]="firstName?.invalid && firstName?.touched"
+            [disabled]="!!(loading$ | async)"
           >
           <div class="error-message" *ngIf="firstName?.invalid && firstName?.touched">
             <span *ngIf="firstName?.errors?.['required']">Requerido</span>
@@ -29,6 +40,7 @@
             formControlName="lastName"
             placeholder="Apellido"
             [class.error]="lastName?.invalid && lastName?.touched"
+            [disabled]="!!(loading$ | async)"
           >
           <div class="error-message" *ngIf="lastName?.invalid && lastName?.touched">
             <span *ngIf="lastName?.errors?.['required']">Requerido</span>
@@ -45,6 +57,7 @@
             class="input-field"
             formControlName="day"
             [class.error]="day?.invalid && day?.touched"
+            [disabled]="!!(loading$ | async)"
           >
             <option value="" disabled selected>Día</option>
             <option *ngFor="let d of days" [value]="d">{{ d }}</option>
@@ -59,6 +72,7 @@
             class="input-field"
             formControlName="month"
             [class.error]="month?.invalid && month?.touched"
+            [disabled]="!!(loading$ | async)"
           >
             <option value="" disabled selected>Mes</option>
             <option *ngFor="let m of months" [value]="m.value">{{ m.label }}</option>
@@ -73,6 +87,7 @@
             class="input-field"
             formControlName="year"
             [class.error]="year?.invalid && year?.touched"
+            [disabled]="!!(loading$ | async)"
           >
             <option value="" disabled selected>Año</option>
             <option *ngFor="let y of years" [value]="y">{{ y }}</option>
@@ -96,6 +111,7 @@
             name="gender" 
             value="female"
             formControlName="gender"
+            [disabled]="!!(loading$ | async)"
           >
         </label>
         
@@ -109,6 +125,7 @@
             name="gender" 
             value="male"
             formControlName="gender"
+            [disabled]="!!(loading$ | async)"
           >
         </label>
         
@@ -122,6 +139,7 @@
             name="gender" 
             value="custom"
             formControlName="gender"
+            [disabled]="!!(loading$ | async)"
           >
         </label>
       </div>
@@ -136,6 +154,7 @@
         formControlName="email"
         placeholder="Número de celular o correo electrónico"
         [class.error]="email?.invalid && email?.touched"
+        [disabled]="!!(loading$ | async)"
       >
       <div class="error-message" *ngIf="email?.invalid && email?.touched">
         <span *ngIf="email?.errors?.['required']">El correo es obligatorio</span>
@@ -149,6 +168,7 @@
         formControlName="password"
         placeholder="Contraseña nueva"
         [class.error]="password?.invalid && password?.touched"
+        [disabled]="!!(loading$ | async)"
       >
       <div class="error-message" *ngIf="password?.invalid && password?.touched">
         <span *ngIf="password?.errors?.['required']">La contraseña es obligatoria</span>
@@ -159,9 +179,10 @@
       <button 
         type="submit" 
         class="register-btn"
-        [disabled]="registerForm.invalid"
+        [disabled]="registerForm.invalid || !!(loading$ | async)"
       >
-        Registrarte
+        <span *ngIf="!(loading$ | async)">Registrarte</span>
+        <span *ngIf="loading$ | async">Creando cuenta...</span>
       </button>
     </form>
 

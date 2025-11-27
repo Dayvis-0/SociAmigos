@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+// src/app/features/auth/pages/forgot-password/forgot-password.ts
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -11,37 +13,35 @@ import { Router } from '@angular/router';
   styleUrls: ['./forgot-password.css']
 })
 export class ForgotPasswordComponent {
-  forgotForm: FormGroup;
-  isLoading = false;
-  emailSent = false;
+  private fb = inject(FormBuilder);
+  private router = inject(Router);
+  private authService = inject(AuthService);
 
-  constructor(
-    private fb: FormBuilder,
-    private router: Router
-  ) {
-    this.forgotForm = this.fb.group({
+  forgotPasswordForm: FormGroup;
+  errorMessage: string = '';
+  successMessage: string = '';
+  loading$ = this.authService.loading$;
+
+  constructor() {
+    this.forgotPasswordForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]]
     });
   }
 
-  onSubmit(): void {
-    if (this.forgotForm.valid) {
-      this.isLoading = true;
-      const email = this.forgotForm.value.email;
-
-      // Simulación de envío de email
-      setTimeout(() => {
-        this.isLoading = false;
-        this.emailSent = true;
-        console.log('Email de recuperación enviado a:', email);
-        
-        // Redirigir al login después de 3 segundos
-        setTimeout(() => {
-          this.router.navigate(['/auth/login']);
-        }, 3000);
-      }, 1500);
+  async onSubmit(): Promise<void> {
+    if (this.forgotPasswordForm.valid) {
+      this.errorMessage = '';
+      this.successMessage = '';
+      
+      try {
+        await this.authService.resetPassword(this.forgotPasswordForm.value.email);
+        this.successMessage = '¡Correo enviado! Revisa tu bandeja de entrada para recuperar tu contraseña.';
+        this.forgotPasswordForm.reset();
+      } catch (error: any) {
+        this.errorMessage = 'Error al enviar el correo. Verifica que el email sea correcto.';
+      }
     } else {
-      this.forgotForm.get('email')?.markAsTouched();
+      this.forgotPasswordForm.get('email')?.markAsTouched();
     }
   }
 
@@ -50,6 +50,6 @@ export class ForgotPasswordComponent {
   }
 
   get email() {
-    return this.forgotForm.get('email');
+    return this.forgotPasswordForm.get('email');
   }
 }

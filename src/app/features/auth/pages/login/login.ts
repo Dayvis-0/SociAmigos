@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+// src/app/features/auth/pages/login/login.ts
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -11,23 +13,31 @@ import { Router } from '@angular/router';
   styleUrls: ['./login.css']
 })
 export class LoginComponent {
-  loginForm: FormGroup;
+  private fb = inject(FormBuilder);
+  private router = inject(Router);
+  private authService = inject(AuthService);
 
-  constructor(
-    private fb: FormBuilder,
-    private router: Router
-  ) {
+  loginForm: FormGroup;
+  errorMessage: string = '';
+  loading$ = this.authService.loading$;
+
+  constructor() {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.loginForm.valid) {
-      console.log('Login form data:', this.loginForm.value);
-      // Simulación de login exitoso - redirige al feed
-      this.router.navigate(['/feed']);
+      this.errorMessage = '';
+      
+      try {
+        await this.authService.login(this.loginForm.value);
+        // El servicio ya maneja la redirección
+      } catch (error: any) {
+        this.errorMessage = this.getErrorMessage(error.code);
+      }
     } else {
       // Marcar todos los campos como touched para mostrar errores
       Object.keys(this.loginForm.controls).forEach(key => {
@@ -36,10 +46,17 @@ export class LoginComponent {
     }
   }
 
-  onGoogleLogin(): void {
-    console.log('Login with Google clicked');
-    // Simulación de login con Google
-    alert('Funcionalidad de Google Login pendiente de implementar');
+  async onGoogleLogin(): Promise<void> {
+    this.errorMessage = '';
+    
+    try {
+      await this.authService.loginWithGoogle();
+      // El servicio ya maneja la redirección
+    } catch (error: any) {
+      if (error.code !== 'auth/popup-closed-by-user') {
+        this.errorMessage = this.getErrorMessage(error.code);
+      }
+    }
   }
 
   onForgotPassword(): void {
@@ -48,6 +65,21 @@ export class LoginComponent {
 
   onCreateAccount(): void {
     this.router.navigate(['/auth/register']);
+  }
+
+  // Obtener mensaje de error personalizado
+  private getErrorMessage(errorCode: string): string {
+    const errorMessages: { [key: string]: string } = {
+      'auth/invalid-credential': 'Correo o contraseña incorrectos',
+      'auth/user-not-found': 'No existe una cuenta con este correo',
+      'auth/wrong-password': 'Contraseña incorrecta',
+      'auth/invalid-email': 'Correo electrónico inválido',
+      'auth/user-disabled': 'Esta cuenta ha sido deshabilitada',
+      'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde',
+      'auth/network-request-failed': 'Error de conexión. Verifica tu internet'
+    };
+
+    return errorMessages[errorCode] || 'Error al iniciar sesión. Intenta nuevamente';
   }
 
   // Getters para acceder fácilmente a los controles del formulario

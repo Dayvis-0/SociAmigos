@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+// src/app/features/auth/pages/register/register.ts
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -11,7 +13,13 @@ import { Router } from '@angular/router';
   styleUrls: ['./register.css']
 })
 export class RegisterComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private router = inject(Router);
+  private authService = inject(AuthService);
+
   registerForm: FormGroup;
+  errorMessage: string = '';
+  loading$ = this.authService.loading$;
   
   // Arrays para los selectores
   days: number[] = [];
@@ -31,10 +39,7 @@ export class RegisterComponent implements OnInit {
   ];
   years: number[] = [];
 
-  constructor(
-    private fb: FormBuilder,
-    private router: Router
-  ) {
+  constructor() {
     this.registerForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
@@ -56,23 +61,16 @@ export class RegisterComponent implements OnInit {
     this.years = Array.from({ length: 90 }, (_, i) => currentYear - i);
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.registerForm.valid) {
-      const formData = this.registerForm.value;
-      console.log('Register form data:', formData);
+      this.errorMessage = '';
       
-      // Construcción de la fecha completa
-      const birthDate = new Date(
-        formData.year,
-        formData.month - 1,
-        formData.day
-      );
-      
-      console.log('Fecha de nacimiento:', birthDate);
-      
-      // Simulación de registro exitoso
-      alert('¡Cuenta creada exitosamente! Bienvenido a SociAmigos');
-      this.router.navigate(['/feed']);
+      try {
+        await this.authService.register(this.registerForm.value);
+        // El servicio ya maneja la redirección
+      } catch (error: any) {
+        this.errorMessage = this.getErrorMessage(error.code);
+      }
     } else {
       // Marcar todos los campos como touched para mostrar errores
       this.markFormGroupTouched(this.registerForm);
@@ -81,6 +79,19 @@ export class RegisterComponent implements OnInit {
 
   onLogin(): void {
     this.router.navigate(['/auth/login']);
+  }
+
+  // Obtener mensaje de error personalizado
+  private getErrorMessage(errorCode: string): string {
+    const errorMessages: { [key: string]: string } = {
+      'auth/email-already-in-use': 'Este correo ya está registrado',
+      'auth/invalid-email': 'Correo electrónico inválido',
+      'auth/weak-password': 'La contraseña es muy débil',
+      'auth/operation-not-allowed': 'Operación no permitida',
+      'auth/network-request-failed': 'Error de conexión. Verifica tu internet'
+    };
+
+    return errorMessages[errorCode] || 'Error al crear la cuenta. Intenta nuevamente';
   }
 
   // Método auxiliar para marcar todos los campos como touched

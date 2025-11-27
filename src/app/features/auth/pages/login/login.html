@@ -2,7 +2,7 @@
   <div class="login-content">
     <!-- LEFT SIDE -->
     <div class="login-left">
-      <div class="logo">🌍</div>
+      <div class="logo">🌐</div>
       <p class="tagline">
         SociAmigos te ayuda a comunicarte y compartir con las personas que forman parte de tu vida.
       </p>
@@ -12,6 +12,16 @@
     <div class="login-right">
       <form class="login-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
         
+        <!-- ERROR MESSAGE -->
+        <div class="alert alert-error" *ngIf="errorMessage">
+          {{ errorMessage }}
+        </div>
+
+        <!-- LOADING INDICATOR -->
+        <div class="alert alert-info" *ngIf="loading$ | async">
+          Iniciando sesión...
+        </div>
+
         <!-- Email Input -->
         <input 
           type="email" 
@@ -19,6 +29,7 @@
           formControlName="email"
           placeholder="Correo electrónico o número de teléfono"
           [class.error]="email?.invalid && email?.touched"
+          [disabled]="!!(loading$ | async)"
         >
         <div class="error-message" *ngIf="email?.invalid && email?.touched">
           <span *ngIf="email?.errors?.['required']">El correo es obligatorio</span>
@@ -32,6 +43,7 @@
           formControlName="password"
           placeholder="Contraseña"
           [class.error]="password?.invalid && password?.touched"
+          [disabled]="!!(loading$ | async)"
         >
         <div class="error-message" *ngIf="password?.invalid && password?.touched">
           <span *ngIf="password?.errors?.['required']">La contraseña es obligatoria</span>
@@ -42,9 +54,10 @@
         <button 
           type="submit" 
           class="login-btn"
-          [disabled]="loginForm.invalid"
+          [disabled]="loginForm.invalid || !!(loading$ | async)"
         >
-          Iniciar sesión
+          <span *ngIf="!(loading$ | async)">Iniciar sesión</span>
+          <span *ngIf="loading$ | async">Cargando...</span>
         </button>
 
         <!-- Forgot Password -->
@@ -59,6 +72,7 @@
           type="button" 
           class="google-login-btn"
           (click)="onGoogleLogin()"
+          [disabled]="!!(loading$ | async)"
         >
           <svg class="google-icon" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -77,6 +91,7 @@
             type="button" 
             class="create-btn"
             (click)="onCreateAccount()"
+            [disabled]="!!(loading$ | async)"
           >
             Crear cuenta nueva
           </button>
