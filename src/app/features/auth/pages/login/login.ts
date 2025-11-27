@@ -42,13 +42,12 @@ export class LoginComponent {
     alert('Funcionalidad de Google Login pendiente de implementar');
   }
 
-  onCreateAccount(): void {
-    this.router.navigate(['/register']);
+  onForgotPassword(): void {
+    this.router.navigate(['/auth/forgot-password']);
   }
 
-  onForgotPassword(): void {
-    console.log('Forgot password clicked');
-    alert('Funcionalidad de recuperar contraseña pendiente de implementar');
+  onCreateAccount(): void {
+    this.router.navigate(['/auth/register']);
   }
 
   // Getters para acceder fácilmente a los controles del formulario
