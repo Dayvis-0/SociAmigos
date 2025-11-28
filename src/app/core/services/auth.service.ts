@@ -1,5 +1,5 @@
 // src/app/core/services/auth.service.ts
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector, runInInjectionContext } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   Auth,
@@ -9,6 +9,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
   updateProfile,
   user,
   User as FirebaseUser
@@ -32,6 +33,7 @@ export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
   private router = inject(Router);
+  private injector = inject(Injector);
 
   // Observable del usuario de Firebase Auth
   private user$ = user(this.auth);
@@ -118,7 +120,9 @@ export class AuthService {
         data.password
       );
 
-      const userData = await this.getUserData(userCredential.user.uid).toPromise();
+      const userData = await runInInjectionContext(this.injector, () => 
+        this.getUserData(userCredential.user.uid).toPromise()
+      );
       
       if (userData) {
         this.currentUserSubject.next(userData);
@@ -145,30 +149,19 @@ export class AuthService {
       const firebaseUser = userCredential.user;
 
       // Verificar si el usuario ya existe en Firestore
-      const userDoc = await getDoc(doc(this.firestore, 'users', firebaseUser.uid));
+      const userDoc = await runInInjectionContext(this.injector, () => 
+        getDoc(doc(this.firestore, 'users', firebaseUser.uid))
+      );
 
       if (!userDoc.exists()) {
-        // Si es un usuario nuevo, crear su documento
-        const userData: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: firebaseUser.displayName || 'Usuario',
-          photoURL: firebaseUser.photoURL || '',
-          bio: '',
-          birthDate: new Date(), // Fecha por defecto
-          gender: 'custom',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-
-        await this.createUserDocument(firebaseUser.uid, userData);
-        this.currentUserSubject.next(userData);
+        // Usuario nuevo - redirigir a completar perfil
+        await this.router.navigate(['/auth/complete-profile']);
       } else {
+        // Usuario existente - ir al feed
         const userData = userDoc.data() as User;
         this.currentUserSubject.next(userData);
+        await this.router.navigate(['/feed']);
       }
-
-      await this.router.navigate(['/feed']);
 
     } catch (error: any) {
       this.handleAuthError(error);
@@ -176,6 +169,33 @@ export class AuthService {
     } finally {
       this.loadingSubject.next(false);
     }
+  }
+
+  // ==================== COMPLETAR PERFIL (GOOGLE) ====================
+  async completeProfile(firstName: string, lastName: string): Promise<void> {
+    const firebaseUser = this.auth.currentUser;
+    
+    if (!firebaseUser) {
+      throw new Error('No user logged in');
+    }
+
+    const displayName = `${firstName} ${lastName}`;
+
+    // Crear documento de usuario en Firestore
+    const userData: User = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || '',
+      displayName: displayName,
+      photoURL: firebaseUser.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName),
+      bio: '',
+      birthDate: new Date(), // Fecha por defecto
+      gender: 'custom',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await this.createUserDocument(firebaseUser.uid, userData);
+    this.currentUserSubject.next(userData);
   }
 
   // ==================== LOGOUT ====================
@@ -192,11 +212,23 @@ export class AuthService {
 
   // ==================== RECUPERAR CONTRASEÑA ====================
   async resetPassword(email: string): Promise<void> {
+    this.loadingSubject.next(true);
+    
     try {
+      // Primero verificar si el usuario existe
+      const methods = await fetchSignInMethodsForEmail(this.auth, email);
+      
+      if (methods.length === 0) {
+        // El usuario no existe
+        throw { code: 'auth/user-not-found' };
+      }
+      
+      // Si existe, enviar el correo de recuperación
       await sendPasswordResetEmail(this.auth, email);
-    } catch (error: any) {
-      this.handleAuthError(error);
+    } catch (error) {
       throw error;
+    } finally {
+      this.loadingSubject.next(false);
     }
   }
 
@@ -204,7 +236,7 @@ export class AuthService {
   private getUserData(uid: string): Observable<User | null> {
     const userDocRef = doc(this.firestore, 'users', uid);
     
-    return from(getDoc(userDocRef)).pipe(
+    return from(runInInjectionContext(this.injector, () => getDoc(userDocRef))).pipe(
       map(docSnap => {
         if (docSnap.exists()) {
           const data = docSnap.data() as User;
@@ -227,24 +259,30 @@ export class AuthService {
   // ==================== CREAR DOCUMENTO DE USUARIO ====================
   private async createUserDocument(uid: string, userData: User): Promise<void> {
     const userDocRef = doc(this.firestore, 'users', uid);
-    await setDoc(userDocRef, {
-      ...userData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    await runInInjectionContext(this.injector, () =>
+      setDoc(userDocRef, {
+        ...userData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+    );
   }
 
   // ==================== ACTUALIZAR PERFIL ====================
   async updateUserProfile(uid: string, updates: Partial<User>): Promise<void> {
     try {
       const userDocRef = doc(this.firestore, 'users', uid);
-      await updateDoc(userDocRef, {
-        ...updates,
-        updatedAt: serverTimestamp()
-      });
+      await runInInjectionContext(this.injector, () =>
+        updateDoc(userDocRef, {
+          ...updates,
+          updatedAt: serverTimestamp()
+        })
+      );
 
       // Actualizar el usuario actual
-      const updatedUser = await this.getUserData(uid).toPromise();
+      const updatedUser = await runInInjectionContext(this.injector, () => 
+        this.getUserData(uid).toPromise()
+      );
       if (updatedUser) {
         this.currentUserSubject.next(updatedUser);
       }

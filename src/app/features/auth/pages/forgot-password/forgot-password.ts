@@ -1,4 +1,3 @@
-// src/app/features/auth/pages/forgot-password/forgot-password.ts
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -20,6 +19,7 @@ export class ForgotPasswordComponent {
   forgotPasswordForm: FormGroup;
   errorMessage: string = '';
   successMessage: string = '';
+  emailSent: boolean = false;
   loading$ = this.authService.loading$;
 
   constructor() {
@@ -36,9 +36,9 @@ export class ForgotPasswordComponent {
       try {
         await this.authService.resetPassword(this.forgotPasswordForm.value.email);
         this.successMessage = '¡Correo enviado! Revisa tu bandeja de entrada para recuperar tu contraseña.';
-        this.forgotPasswordForm.reset();
+        this.emailSent = true;
       } catch (error: any) {
-        this.errorMessage = 'Error al enviar el correo. Verifica que el email sea correcto.';
+        this.errorMessage = this.getErrorMessage(error.code);
       }
     } else {
       this.forgotPasswordForm.get('email')?.markAsTouched();
@@ -47,6 +47,17 @@ export class ForgotPasswordComponent {
 
   onBackToLogin(): void {
     this.router.navigate(['/auth/login']);
+  }
+
+  private getErrorMessage(errorCode: string): string {
+    const errorMessages: { [key: string]: string } = {
+      'auth/user-not-found': 'No existe una cuenta con este correo electrónico',
+      'auth/invalid-email': 'Correo electrónico inválido',
+      'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde',
+      'auth/network-request-failed': 'Error de conexión. Verifica tu internet'
+    };
+
+    return errorMessages[errorCode] || 'Error al enviar el correo. Verifica que el email sea correcto.';
   }
 
   get email() {

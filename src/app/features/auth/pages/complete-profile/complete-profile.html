@@ -1,0 +1,70 @@
+<div class="complete-profile-container">
+  <div class="complete-profile-box">
+    <div class="logo">🌐</div>
+    <h2>Completa tu perfil</h2>
+    <p class="subtitle">
+      Para continuar, necesitamos algunos datos adicionales
+    </p>
+
+    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()">
+      
+      <!-- ERROR MESSAGE -->
+      <div class="alert alert-error" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <!-- LOADING INDICATOR -->
+      <div class="alert alert-info" *ngIf="loading">
+        Guardando información...
+      </div>
+
+      <!-- First Name Input -->
+      <input 
+        type="text" 
+        class="input-field"
+        formControlName="firstName"
+        placeholder="Nombre"
+        [class.error]="firstName?.invalid && firstName?.touched"
+        [disabled]="loading"
+      >
+      <div class="error-message" *ngIf="firstName?.invalid && firstName?.touched">
+        <span *ngIf="firstName?.errors?.['required']">El nombre es obligatorio</span>
+        <span *ngIf="firstName?.errors?.['minlength']">Mínimo 2 caracteres</span>
+      </div>
+
+      <!-- Last Name Input -->
+      <input 
+        type="text" 
+        class="input-field"
+        formControlName="lastName"
+        placeholder="Apellido"
+        [class.error]="lastName?.invalid && lastName?.touched"
+        [disabled]="loading"
+      >
+      <div class="error-message" *ngIf="lastName?.invalid && lastName?.touched">
+        <span *ngIf="lastName?.errors?.['required']">El apellido es obligatorio</span>
+        <span *ngIf="lastName?.errors?.['minlength']">Mínimo 2 caracteres</span>
+      </div>
+
+      <!-- Submit Button -->
+      <button 
+        type="submit" 
+        class="submit-btn"
+        [disabled]="profileForm.invalid || loading"
+      >
+        <span *ngIf="!loading">Continuar</span>
+        <span *ngIf="loading">Guardando...</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="sidebar-footer">
+    <a href="javascript:void(0)" class="footer-link">Políticas</a>
+    <span class="footer-separator">·</span>
+    <a href="javascript:void(0)" class="footer-link">Cookies</a>
+    <span class="footer-separator">·</span>
+    <a href="javascript:void(0)" class="footer-link">Derechos de autor</a>
+    <div class="footer-copyright">© 2025 Red Social</div>
+  </div>
+</div>

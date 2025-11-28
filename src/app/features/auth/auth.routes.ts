@@ -15,6 +15,10 @@ export const authRoutes: Routes = [
     loadComponent: () => import('./pages/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent)
   },
   {
+    path: 'complete-profile',
+    loadComponent: () => import('./pages/complete-profile/complete-profile').then(m => m.CompleteProfileComponent)
+  },
+  {
     path: '',
     redirectTo: 'login',
     pathMatch: 'full'

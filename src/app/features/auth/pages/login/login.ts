@@ -20,6 +20,7 @@ export class LoginComponent {
   loginForm: FormGroup;
   errorMessage: string = '';
   loading$ = this.authService.loading$;
+  showPassword: boolean = true;
 
   constructor() {
     this.loginForm = this.fb.group({
@@ -89,5 +90,9 @@ export class LoginComponent {
 
   get password() {
     return this.loginForm.get('password');
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 }
