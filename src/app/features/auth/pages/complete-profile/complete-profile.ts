@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Auth, updateProfile } from '@angular/fire/auth';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AuthFooter } from '../../../../shared/components/auth-footer/auth-footer';
 
@@ -17,6 +18,7 @@ export class CompleteProfile {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private authService = inject(AuthService);
+  private auth = inject(Auth);
 
   profileForm: FormGroup;
   errorMessage: string = '';
@@ -39,32 +41,36 @@ export class CompleteProfile {
       this.loading = true;
       
       try {
-        const firebaseUser = this.authService['auth'].currentUser;
+        const currentUser = this.auth.currentUser;
+        
+        if (!currentUser) {
+          throw new Error('No hay usuario autenticado');
+        }
+
         const displayName = `${this.profileForm.value.firstName} ${this.profileForm.value.lastName}`;
         
         // Actualizar el displayName en Firebase Auth
-        if (firebaseUser) {
-          await import('@angular/fire/auth').then(({ updateProfile }) => {
-            return updateProfile(firebaseUser, { displayName });
-          });
-        }
+        await updateProfile(currentUser, { displayName });
 
-        // Enviar los datos al servicio
+        // Guardar los datos completos en Firestore
         await this.authService.completeProfile({
-          bio: this.profileForm.value.bio,
-          website: this.profileForm.value.website,
-          location: this.profileForm.value.location,
-          occupation: this.profileForm.value.occupation
+          displayName,
+          bio: this.profileForm.value.bio || '',
+          website: this.profileForm.value.website || '',
+          location: this.profileForm.value.location || '',
+          occupation: this.profileForm.value.occupation || ''
         });
         
-        this.router.navigate(['/feed']);
+        // Redirigir al feed
+        await this.router.navigate(['/feed']);
       } catch (error: any) {
-        this.errorMessage = 'Error al guardar la información. Intenta nuevamente';
-        console.error('Error:', error);
+        this.errorMessage = error.message || 'Error al guardar la información. Intenta nuevamente';
+        console.error('Error completeProfile:', error);
       } finally {
         this.loading = false;
       }
     } else {
+      // Marcar todos los campos como tocados para mostrar errores
       Object.keys(this.profileForm.controls).forEach(key => {
         this.profileForm.get(key)?.markAsTouched();
       });

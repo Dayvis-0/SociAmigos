@@ -24,13 +24,13 @@
   <!-- ONLINE USERS CARD -->
   <div class="suggestions-card">
     <div class="suggestions-title">
-      {{ onlineUsers.length > 0 ? 'Usuarios Conectados' : 'Cargando...' }}
+      {{ onlineUsers.length > 0 ? 'Amigos Conectados' : 'Cargando...' }}
     </div>
     
     <!-- Loading State -->
     <div *ngIf="loadingOnlineUsers" class="loading-state">
       <div class="mini-spinner"></div>
-      <p>Cargando usuarios...</p>
+      <p>Cargando amigos...</p>
     </div>
 
     <!-- Online Users List -->
@@ -56,7 +56,7 @@
     <!-- Empty State -->
     <div *ngIf="!loadingOnlineUsers && onlineUsers.length === 0" class="empty-online">
       <p>👥</p>
-      <span>No hay usuarios conectados</span>
+      <span>No hay amigos conectados</span>
     </div>
   </div>
 </aside>

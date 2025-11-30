@@ -36,9 +36,15 @@
       <button 
         class="sidebar-follow-btn"
         [class.following]="suggestion.following"
+        [disabled]="isProcessing(suggestion.suggestedUserId)"
         (click)="toggleFollow(suggestion)"
       >
-        {{ suggestion.following ? 'Siguiendo' : 'Seguir' }}
+        <span *ngIf="!isProcessing(suggestion.suggestedUserId)">
+          {{ suggestion.following ? 'Siguiendo' : 'Seguir' }}
+        </span>
+        <span *ngIf="isProcessing(suggestion.suggestedUserId)">
+          Enviando...
+        </span>
       </button>
     </div>
   </div>

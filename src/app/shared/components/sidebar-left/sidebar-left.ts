@@ -25,6 +25,7 @@ export class SidebarLeft implements OnInit, OnDestroy {
   
   suggestions: SuggestionUI[] = [];
   loadingSuggestions: boolean = true;
+  processingFollow: Set<string> = new Set(); // Para evitar múltiples clics
   
   private userSubscription?: Subscription;
 
@@ -101,8 +102,17 @@ export class SidebarLeft implements OnInit, OnDestroy {
   async toggleFollow(suggestion: SuggestionUI): Promise<void> {
     if (!this.currentUser) {
       console.error('❌ No hay usuario autenticado');
+      alert('Debes iniciar sesión para seguir a otros usuarios');
       return;
     }
+
+    // Evitar múltiples clics
+    if (this.processingFollow.has(suggestion.suggestedUserId)) {
+      console.log('⏳ Ya se está procesando esta solicitud');
+      return;
+    }
+
+    this.processingFollow.add(suggestion.suggestedUserId);
 
     try {
       if (suggestion.following) {
@@ -112,6 +122,8 @@ export class SidebarLeft implements OnInit, OnDestroy {
         console.log('👋 Dejaste de seguir a', suggestion.name);
       } else {
         // Enviar solicitud de amistad
+        console.log('📤 Enviando solicitud de amistad a:', suggestion.name);
+        
         await this.friendService.sendFriendRequest(
           this.currentUser.userId,
           suggestion.suggestedUserId
@@ -119,10 +131,22 @@ export class SidebarLeft implements OnInit, OnDestroy {
         
         suggestion.following = true;
         console.log('✅ Solicitud de amistad enviada a', suggestion.name);
+        console.log('📬 La notificación debería haber llegado al usuario:', suggestion.suggestedUserId);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al seguir/dejar de seguir:', error);
+      alert(error.message || 'Error al enviar la solicitud. Intenta nuevamente.');
+      suggestion.following = false; // Revertir el estado en caso de error
+    } finally {
+      this.processingFollow.delete(suggestion.suggestedUserId);
     }
+  }
+
+  /**
+   * Verificar si está procesando
+   */
+  isProcessing(suggestedUserId: string): boolean {
+    return this.processingFollow.has(suggestedUserId);
   }
 
   /**

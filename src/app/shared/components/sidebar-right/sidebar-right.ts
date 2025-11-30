@@ -52,7 +52,8 @@ export class SidebarRight implements OnInit, OnDestroy {
         this.friendsCount = user.friendsCount || 0;
         this.postsCount = user.postsCount || 0;
         
-        this.loadOnlineUsers(user.userId);
+        // Cargar solo amigos conectados
+        this.loadOnlineFriends(user.userId);
       }
     });
   }
@@ -62,12 +63,18 @@ export class SidebarRight implements OnInit, OnDestroy {
     this.friendsSubscription?.unsubscribe();
   }
 
-  loadOnlineUsers(userId: string): void {
+  /**
+   * Cargar SOLO amigos conectados (no sugerencias)
+   */
+  loadOnlineFriends(userId: string): void {
     this.loadingOnlineUsers = true;
 
     this.friendsSubscription = this.friendService.getFriends(userId).subscribe({
       next: (friends) => {
+        console.log('👥 Amigos encontrados:', friends.length);
+        
         if (friends.length > 0) {
+          // Tomar máximo 5 amigos aleatorios
           const randomFriends = this.shuffleArray(friends).slice(0, 5);
           
           this.onlineUsers = randomFriends.map(friend => ({
@@ -77,37 +84,27 @@ export class SidebarRight implements OnInit, OnDestroy {
             photoURL: friend.photoURL,
             gradient: getRandomGradient()
           }));
+          
+          console.log('✅ Amigos conectados mostrados:', this.onlineUsers.length);
         } else {
-          this.loadSuggestedUsers(userId);
+          // NO mostrar sugerencias, dejar vacío
+          this.onlineUsers = [];
+          console.log('ℹ️ No hay amigos para mostrar');
         }
         
         this.loadingOnlineUsers = false;
       },
       error: (error) => {
-        console.error('❌ Error al cargar usuarios online:', error);
-        this.loadSuggestedUsers(userId);
+        console.error('❌ Error al cargar amigos:', error);
+        this.onlineUsers = [];
         this.loadingOnlineUsers = false;
       }
     });
   }
 
-  async loadSuggestedUsers(userId: string): Promise<void> {
-    try {
-      const suggestions = await this.friendService.generateSuggestions(userId, 5);
-      
-      this.onlineUsers = suggestions.map(suggestion => ({
-        userId: suggestion.suggestedUserId,
-        initials: suggestion.suggestedUserInitials,
-        name: suggestion.suggestedUserName,
-        photoURL: suggestion.suggestedUserPhotoURL,
-        gradient: getRandomGradient()
-      }));
-    } catch (error) {
-      console.error('❌ Error al cargar usuarios sugeridos:', error);
-      this.onlineUsers = [];
-    }
-  }
-
+  /**
+   * Mezclar array aleatoriamente (Fisher-Yates shuffle)
+   */
   private shuffleArray<T>(array: T[]): T[] {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -117,6 +114,9 @@ export class SidebarRight implements OnInit, OnDestroy {
     return shuffled;
   }
 
+  /**
+   * Obtener iniciales del nombre
+   */
   getInitials(displayName: string): string {
     if (!displayName) return '??';
     

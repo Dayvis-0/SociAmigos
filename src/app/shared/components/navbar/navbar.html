@@ -1,7 +1,7 @@
 <nav class="navbar">
   <div class="navbar-left">
     <a routerLink="/feed" class="logo-link">
-      <div class="app-logo">🌍</div>
+      <div class="app-logo">🌐</div>
     </a>
     <div class="search-container" [class.open]="searchOpen">
       <div class="search-input-wrapper">
@@ -35,13 +35,93 @@
   </div>
   
   <div class="navbar-right">
-    <div class="notification-btn">
-      <span class="notification-icon">🔔</span>
-      <span class="notification-badge">3</span>
+    <!-- NOTIFICATION BELL -->
+    <div class="notification-container">
+      <div 
+        class="notification-btn" 
+        (click)="toggleNotifications()"
+        [class.has-unread]="unreadCount > 0"
+      >
+        <span class="notification-icon">🔔</span>
+        <span class="notification-badge" *ngIf="unreadCount > 0">
+          {{ unreadCount > 9 ? '9+' : unreadCount }}
+        </span>
+      </div>
+      
+      <!-- NOTIFICATIONS DROPDOWN -->
+      <div class="notifications-dropdown" [class.show]="notificationsOpen">
+        <div class="notifications-header">
+          <h3>Notificaciones</h3>
+          <button 
+            class="mark-all-read-btn" 
+            *ngIf="unreadCount > 0"
+            (click)="markAllAsRead()"
+          >
+            Marcar todas como leídas
+          </button>
+        </div>
+        
+        <div class="notifications-list">
+          <div 
+            *ngFor="let notification of notifications"
+            class="notification-item"
+            [class.unread]="!notification.read"
+            (click)="handleNotificationClick(notification)"
+          >
+            <div class="notification-avatar">
+              <div 
+                class="avatar-circle"
+                [style.background-image]="notification.fromUserPhotoURL ? 'url(' + notification.fromUserPhotoURL + ')' : 'none'"
+              >
+                <span *ngIf="!notification.fromUserPhotoURL">
+                  {{ getInitials(notification.fromUserName) }}
+                </span>
+              </div>
+              <span class="notification-type-icon">
+                {{ getNotificationIcon(notification.type) }}
+              </span>
+            </div>
+            
+            <div class="notification-content">
+              <p class="notification-message">{{ notification.message }}</p>
+              <span class="notification-time">{{ getTimeAgo(notification) }}</span>
+              
+              <!-- FRIEND REQUEST ACTIONS -->
+              <div 
+                class="notification-actions" 
+                *ngIf="notification.type === 'friend_request' && notification.friendshipId"
+              >
+                <button 
+                  class="btn-accept"
+                  (click)="acceptFriendRequest(notification, $event)"
+                  [disabled]="loadingNotification === notification.notificationId"
+                >
+                  {{ loadingNotification === notification.notificationId ? 'Procesando...' : 'Aceptar' }}
+                </button>
+                <button 
+                  class="btn-reject"
+                  (click)="rejectFriendRequest(notification, $event)"
+                  [disabled]="loadingNotification === notification.notificationId"
+                >
+                  Rechazar
+                </button>
+              </div>
+            </div>
+            
+            <div class="unread-dot" *ngIf="!notification.read"></div>
+          </div>
+          
+          <!-- EMPTY STATE -->
+          <div class="notifications-empty" *ngIf="notifications.length === 0">
+            <span class="empty-icon">🔔</span>
+            <p>No tienes notificaciones</p>
+          </div>
+        </div>
+      </div>
     </div>
     
+    <!-- USER MENU -->
     <div class="user-menu-container">
-      <!-- Avatar con iniciales del usuario -->
       <div 
         class="user-avatar-nav" 
         (click)="toggleUserMenu()"
@@ -50,9 +130,7 @@
         {{ userInitials }}
       </div>
       
-      <!-- Dropdown Menu -->
       <div class="user-dropdown-menu" [class.show]="userMenuOpen">
-        <!-- User Info Header -->
         <div class="user-menu-header" *ngIf="currentUser">
           <div class="user-menu-avatar">{{ userInitials }}</div>
           <div class="user-menu-info">
@@ -63,16 +141,15 @@
         
         <div class="user-menu-divider"></div>
         
-        <!-- Ver perfil -->
         <a 
           routerLink="/profile" 
           class="user-menu-item" 
+          (click)="closeUserMenu()"
         >
           <span>👤</span>
           <span>Ver perfil</span>
         </a>
         
-        <!-- Configuración (opcional) -->
         <a 
           routerLink="/profile/edit" 
           class="user-menu-item" 
@@ -84,7 +161,6 @@
         
         <div class="user-menu-divider"></div>
         
-        <!-- Cerrar sesión -->
         <a 
           href="javascript:void(0)" 
           class="user-menu-item logout-item" 

@@ -52,9 +52,10 @@ export interface LoginData {
 
 /**
  * Interface para Completar Perfil
- * Datos adicionales después del registro
+ * Datos adicionales después del registro con Google
  */
 export interface CompleteProfileData {
+  displayName?: string;              // Nombre completo del usuario
   bio?: string;
   website?: string;
   location?: string;

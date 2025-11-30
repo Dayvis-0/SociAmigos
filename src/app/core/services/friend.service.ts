@@ -18,15 +18,20 @@ import {
   Timestamp
 } from '@angular/fire/firestore';
 import { Observable, from, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { Suggestion, Friendship } from '../models/suggestion.model';
 import { User } from '../models/user.model';
+import { NotificationService } from './notification.service';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FriendService {
   private firestore = inject(Firestore);
+  private notificationService = inject(NotificationService);
+  private authService = inject(AuthService);
+  
   private friendsCollection = collection(this.firestore, 'friends');
   private suggestionsCollection = collection(this.firestore, 'suggestions');
   private usersCollection = collection(this.firestore, 'users');
@@ -64,26 +69,22 @@ export class FriendService {
 
   /**
    * Generar sugerencias aleatorias basadas en usuarios existentes
-   * (Para desarrollo - en producción esto sería más sofisticado)
    */
   async generateSuggestions(userId: string, limitCount: number = 3): Promise<Suggestion[]> {
     try {
-      // Obtener usuarios aleatorios que no sean amigos
       const usersQuery = query(this.usersCollection, limit(20));
       const usersSnapshot = await getDocs(usersQuery);
       
       const suggestions: Suggestion[] = [];
       
       for (const userDoc of usersSnapshot.docs) {
-        if (userDoc.id === userId) continue; // Saltear el usuario actual
+        if (userDoc.id === userId) continue;
         
         const userData = userDoc.data() as User;
         
-        // Verificar si ya son amigos
         const areFriends = await this.areFriends(userId, userDoc.id);
         if (areFriends) continue;
         
-        // Crear sugerencia
         const suggestion: Suggestion = {
           suggestionId: '',
           userId: userId,
@@ -91,7 +92,7 @@ export class FriendService {
           suggestedUserName: userData.displayName,
           suggestedUserInitials: this.getInitials(userData.displayName),
           suggestedUserPhotoURL: userData.photoURL,
-          mutualFriends: Math.floor(Math.random() * 10), // Random para desarrollo
+          mutualFriends: Math.floor(Math.random() * 10),
           reason: 'random',
           createdAt: Timestamp.now()
         };
@@ -115,13 +116,20 @@ export class FriendService {
    */
   async sendFriendRequest(fromUserId: string, toUserId: string): Promise<void> {
     try {
-      // Verificar si ya existe una solicitud o amistad
       const existingFriendship = await this.getFriendship(fromUserId, toUserId);
       
       if (existingFriendship) {
         console.log('⚠️ Ya existe una relación de amistad');
         return;
       }
+
+      // Obtener datos del usuario que envía la solicitud
+      const fromUserDoc = await getDoc(doc(this.firestore, 'users', fromUserId));
+      if (!fromUserDoc.exists()) {
+        throw new Error('Usuario no encontrado');
+      }
+      
+      const fromUserData = fromUserDoc.data() as User;
 
       // Crear nueva solicitud
       const friendshipData = {
@@ -137,6 +145,15 @@ export class FriendService {
       const docRef = await addDoc(this.friendsCollection, friendshipData);
       await updateDoc(docRef, { friendshipId: docRef.id });
 
+      // Crear notificación
+      await this.notificationService.createFriendRequestNotification(
+        toUserId,
+        fromUserId,
+        fromUserData.displayName,
+        fromUserData.photoURL,
+        docRef.id
+      );
+
       console.log('✅ Solicitud de amistad enviada');
     } catch (error) {
       console.error('❌ Error al enviar solicitud:', error);
@@ -149,11 +166,45 @@ export class FriendService {
    */
   async acceptFriendRequest(friendshipId: string): Promise<void> {
     try {
+      // Obtener información de la amistad
+      const friendshipDoc = await getDoc(doc(this.firestore, 'friends', friendshipId));
+      if (!friendshipDoc.exists()) {
+        throw new Error('Solicitud no encontrada');
+      }
+
+      const friendshipData = friendshipDoc.data() as Friendship;
+      const currentUserId = this.authService.getCurrentUserId();
+      
+      if (!currentUserId) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      // Actualizar estado
       const docRef = doc(this.firestore, 'friends', friendshipId);
       await updateDoc(docRef, {
         status: 'accepted',
         updatedAt: serverTimestamp()
       });
+
+      // Obtener datos del usuario que acepta
+      const currentUserDoc = await getDoc(doc(this.firestore, 'users', currentUserId));
+      if (currentUserDoc.exists()) {
+        const currentUserData = currentUserDoc.data() as User;
+
+        // Crear notificación para el usuario que envió la solicitud
+        await this.notificationService.createFriendAcceptedNotification(
+          friendshipData.requestedBy,
+          currentUserId,
+          currentUserData.displayName,
+          currentUserData.photoURL
+        );
+      }
+
+      // Eliminar la notificación de solicitud original
+      await this.notificationService.deleteNotificationByFriendshipId(
+        currentUserId,
+        friendshipId
+      );
 
       console.log('✅ Solicitud de amistad aceptada');
     } catch (error) {
@@ -167,11 +218,21 @@ export class FriendService {
    */
   async rejectFriendRequest(friendshipId: string): Promise<void> {
     try {
+      const currentUserId = this.authService.getCurrentUserId();
+      
+      if (!currentUserId) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      // Eliminar la solicitud
       const docRef = doc(this.firestore, 'friends', friendshipId);
-      await updateDoc(docRef, {
-        status: 'rejected',
-        updatedAt: serverTimestamp()
-      });
+      await deleteDoc(docRef);
+
+      // Eliminar la notificación
+      await this.notificationService.deleteNotificationByFriendshipId(
+        currentUserId,
+        friendshipId
+      );
 
       console.log('✅ Solicitud de amistad rechazada');
     } catch (error) {
@@ -250,12 +311,12 @@ export class FriendService {
         getDocs(q2)
       ]);
 
-      const doc = snapshot1.docs[0] || snapshot2.docs[0];
+      const docSnap = snapshot1.docs[0] || snapshot2.docs[0];
       
-      if (doc) {
-        const data = doc.data();
+      if (docSnap) {
+        const data = docSnap.data();
         return {
-          friendshipId: doc.id,
+          friendshipId: docSnap.id,
           ...data,
           createdAt: this.convertToTimestamp(data['createdAt']),
           updatedAt: this.convertToTimestamp(data['updatedAt'])
@@ -299,7 +360,6 @@ export class FriendService {
           friendIds.push(data['userId1']);
         });
 
-        // Obtener datos de los amigos
         const friends: User[] = [];
         for (const friendId of friendIds) {
           const userDoc = await getDoc(doc(this.firestore, 'users', friendId));
@@ -337,6 +397,3 @@ export class FriendService {
     return name.substring(0, 2).toUpperCase();
   }
 }
-
-// Agregar switchMap al import de rxjs/operators
-import { switchMap } from 'rxjs/operators';

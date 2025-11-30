@@ -202,49 +202,54 @@ export class AuthService {
   }
 
   // ==================== COMPLETAR PERFIL (GOOGLE) ====================
-  async completeProfile(data: CompleteProfileData): Promise<void> {
-    const firebaseUser = this.auth.currentUser;
-    
-    if (!firebaseUser) {
-      throw new Error('No hay usuario autenticado');
-    }
-
-    try {
-      this.loadingSubject.next(true);
-
-      // Crear documento de usuario en Firestore con estructura completa
-      const userData: Omit<User, 'createdAt' | 'updatedAt'> = {
-        userId: firebaseUser.uid,
-        email: firebaseUser.email || '',
-        displayName: firebaseUser.displayName || 'Usuario',
-        photoURL: data.photoURL || firebaseUser.photoURL || 
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(firebaseUser.displayName || 'Usuario')}&background=random`,
-        bio: data.bio || '',
-        coverPhotoURL: data.coverPhotoURL,
-        friendsCount: 0,
-        postsCount: 0,
-        website: data.website,
-        location: data.location,
-        occupation: data.occupation
-      };
-
-      await this.createUserDocument(firebaseUser.uid, userData);
+    async completeProfile(data: CompleteProfileData): Promise<void> {
+      const firebaseUser = this.auth.currentUser;
       
-      const completeUser = await firstValueFrom(this.getUserData(firebaseUser.uid));
-      
-      if (completeUser) {
-        this.currentUserSubject.next(completeUser);
+      if (!firebaseUser) {
+        throw new Error('No hay usuario autenticado');
       }
 
-      await this.router.navigate(['/feed']);
+      try {
+        this.loadingSubject.next(true);
 
-    } catch (error: any) {
-      console.error('Error al completar perfil:', error);
-      throw error;
-    } finally {
-      this.loadingSubject.next(false);
+        // Usar el displayName que viene en data, o el de Firebase Auth como fallback
+        const displayName = data.displayName || firebaseUser.displayName || 'Usuario';
+
+        // Crear documento de usuario en Firestore con estructura completa
+        const userData: any = {
+          userId: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: displayName,
+          photoURL: data.photoURL || firebaseUser.photoURL || 
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`,
+          bio: data.bio || '',
+          friendsCount: 0,
+          postsCount: 0
+        };
+
+        // Solo agregar campos opcionales si tienen valor
+        if (data.coverPhotoURL) userData.coverPhotoURL = data.coverPhotoURL;
+        if (data.website) userData.website = data.website;
+        if (data.location) userData.location = data.location;
+        if (data.occupation) userData.occupation = data.occupation;
+
+        await this.createUserDocument(firebaseUser.uid, userData);
+        
+        const completeUser = await firstValueFrom(this.getUserData(firebaseUser.uid));
+        
+        if (completeUser) {
+          this.currentUserSubject.next(completeUser);
+        }
+
+        await this.router.navigate(['/feed']);
+
+      } catch (error: any) {
+        console.error('Error al completar perfil:', error);
+        throw error;
+      } finally {
+        this.loadingSubject.next(false);
+      }
     }
-  }
 
   // ==================== LOGOUT ====================
   async logout(): Promise<void> {
