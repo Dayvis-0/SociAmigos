@@ -1,55 +1,16 @@
 import { Component, ViewChild, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { ProfileHeader } from '../../components/profile-header/profile-header';
 import { Navbar } from '../../../../shared/components/navbar/navbar';
 import { CreatePostModal } from '../../../home/components/create-post-modal/create-post-modal'; 
 import { CommentSection } from '../../../home/components/comment-section/comment-section';
 import { LikeButton } from '../../../home/components/like-button/like-button'; 
 import { AuthService } from '../../../../core/services/auth.service';
+import { ProfileService } from '../../../../core/services/profile.service'; 
 import { User } from '../../../../core/models/user.model';
+import { Suggestion, Post, AboutInfo, Friend } from '../../../../core/models/profile.model';
 import { Subscription } from 'rxjs';
-
-interface Suggestion {
-  initials: string;
-  name: string;
-  mutualFriends: number;
-  gradient: string;
-  following: boolean;
-}
-
-interface Post {
-  id: number;
-  author: string;
-  initials: string;
-  time: string;
-  content: string;
-  hasImage: boolean;
-  imageEmoji?: string;
-  likes: number;
-  comments: number;
-  liked: boolean;
-  avatarClass: string;
-}
-
-interface AboutInfo {
-  icon: string;
-  title: string;
-  description: string;
-}
-
-interface Friend {
-  initials: string;
-  name: string;
-  mutualFriends: number;
-  gradient: string;
-}
-
-interface Video {
-  emoji: string;
-  title: string;
-  views: string;
-  time: string;
-}
 
 @Component({
   selector: 'app-user-profile',
@@ -67,6 +28,8 @@ interface Video {
 })
 export class UserProfile implements OnInit, OnDestroy {
   private authService = inject(AuthService);
+  private profileService = inject(ProfileService);
+  private route = inject(ActivatedRoute);
   
   @ViewChild(CreatePostModal) createPostModal!: CreatePostModal;
 
@@ -74,138 +37,188 @@ export class UserProfile implements OnInit, OnDestroy {
   editingPostId: number | null = null;
 
   // Datos del usuario desde Firebase
-  currentUser: User | null = null;
+  currentUser: User | null = null; // Usuario autenticado
+  profileUser: User | null = null; // Usuario del perfil que se está viendo
+  isOwnProfile: boolean = true; // ¿Es mi propio perfil?
+  
   userName: string = '';
   userInitials: string = '';
-  friendsCount: number = 248;
+  friendsCount: number = 0;
+  postsCount: number = 0;
   
   private userSubscription?: Subscription;
+  private routeSubscription?: Subscription;
 
-  suggestions: Suggestion[] = [
-    { initials: 'RM', name: 'Roberto Morales', mutualFriends: 4, gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', following: false },
-    { initials: 'PT', name: 'Patricia Torres', mutualFriends: 6, gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', following: false },
-    { initials: 'MV', name: 'Miguel Vargas', mutualFriends: 2, gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', following: false },
-    { initials: 'CL', name: 'Carmen López', mutualFriends: 3, gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', following: false },
-    { initials: 'AL', name: 'Alberto Luna', mutualFriends: 5, gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', following: false },
-    { initials: 'VH', name: 'Valeria Herrera', mutualFriends: 7, gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', following: false }
-  ];
-
-  posts: Post[] = [
-    {
-      id: 1,
-      author: 'María González',
-      initials: 'MG',
-      time: 'Hace 2 horas',
-      content: '¡Acabo de terminar mi nuevo proyecto web! Estoy muy emocionada de compartirlo con todos ustedes. Ha sido un viaje increíble de aprendizaje 🚀',
-      hasImage: true,
-      imageEmoji: '🎨',
-      likes: 24,
-      comments: 5,
-      liked: true,
-      avatarClass: ''
-    },
-    {
-      id: 2,
-      author: 'María González',
-      initials: 'MG',
-      time: 'Hace 5 horas',
-      content: 'Compartiendo mi experiencia aprendiendo nuevas tecnologías. ¡El conocimiento no tiene límites! 💻✨',
-      hasImage: false,
-      likes: 18,
-      comments: 7,
-      liked: false,
-      avatarClass: ''
-    },
-    {
-      id: 3,
-      author: 'María González',
-      initials: 'MG',
-      time: 'Hace 1 día',
-      content: 'Reflexionando sobre la importancia del aprendizaje continuo en tecnología 💭✨',
-      hasImage: true,
-      imageEmoji: '📚',
-      likes: 32,
-      comments: 8,
-      liked: false,
-      avatarClass: ''
-    },
-    {
-      id: 4,
-      author: 'María González',
-      initials: 'MG',
-      time: 'Hace 2 días',
-      content: '¡Feliz inicio de semana! Que sea productiva para todos 🌟',
-      hasImage: false,
-      likes: 45,
-      comments: 12,
-      liked: false,
-      avatarClass: ''
-    }
-  ];
-
-  aboutInfo: AboutInfo[] = [
-    { icon: '🎓', title: 'Estudios', description: 'Ingeniería de Sistemas en Universidad Nacional' },
-    { icon: '💼', title: 'Trabajo', description: 'Desarrolladora Web en TechCorp' },
-    { icon: '🌐', title: 'Sitio web', description: 'www.mariagonzalez.dev' }
-  ];
-
-  interests: string[] = [
-    '💻 Programación',
-    '🎨 Diseño UI/UX',
-    '📚 Lectura',
-    '✈️ Viajes',
-    '☕ Café',
-    '🎵 Música'
-  ];
-
-  friends: Friend[] = [
-    { initials: 'AP', name: 'Ana Pérez', mutualFriends: 12, gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-    { initials: 'DL', name: 'Diego López', mutualFriends: 8, gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-    { initials: 'SF', name: 'Sofía Fernández', mutualFriends: 15, gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-    { initials: 'RM', name: 'Roberto Morales', mutualFriends: 6, gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-    { initials: 'PT', name: 'Patricia Torres', mutualFriends: 9, gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-    { initials: 'MV', name: 'Miguel Vargas', mutualFriends: 4, gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
-    { initials: 'CL', name: 'Carmen López', mutualFriends: 11, gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
-    { initials: 'AL', name: 'Alberto Luna', mutualFriends: 7, gradient: 'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)' },
-    { initials: 'VH', name: 'Valeria Herrera', mutualFriends: 13, gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' }
-  ];
-
+  // Arrays que se cargarán desde Firebase
+  suggestions: Suggestion[] = [];
+  posts: Post[] = [];
+  aboutInfo: AboutInfo[] = [];
+  interests: string[] = [];
+  friends: Friend[] = [];
   photoEmojis: string[] = ['🏔️', '🌅', '🎨', '📸', '🌸', '🌊', '🖼️', '🌆', '🎭', '🎪', '🎡', '🎢'];
 
   ngOnInit(): void {
-    // Suscribirse al usuario actual de Firebase
+    // Suscribirse al usuario autenticado actual
     this.userSubscription = this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
-      if (user) {
-        this.userName = user.displayName;
-        this.userInitials = this.getInitials(user.displayName);
+    });
+
+    // Escuchar cambios en la ruta para detectar el userName
+    this.routeSubscription = this.route.paramMap.subscribe(params => {
+      const userName = params.get('userName');
+      
+      if (userName) {
+        // Estamos viendo el perfil de otro usuario
+        console.log('🔍 Cargando perfil de usuario:', userName);
+        this.isOwnProfile = this.currentUser?.displayName === userName;
         
-        // Actualizar posts con datos del usuario
-        this.posts = this.posts.map(post => ({
-          ...post,
-          author: this.userName,
-          initials: this.userInitials
-        }));
+        if (this.isOwnProfile) {
+          this.loadOwnProfile();
+        } else {
+          this.loadUserProfile(userName);
+        }
+      } else {
+        // Estamos viendo nuestro propio perfil
+        console.log('👤 Mostrando perfil propio');
+        this.isOwnProfile = true;
+        this.loadOwnProfile();
       }
     });
   }
 
   ngOnDestroy(): void {
-    // Limpiar suscripción
     this.userSubscription?.unsubscribe();
+    this.routeSubscription?.unsubscribe();
+  }
+
+  /**
+   * Cargar perfil propio
+   */
+  private loadOwnProfile(): void {
+    if (this.currentUser) {
+      this.profileUser = this.currentUser;
+      this.userName = this.currentUser.displayName;
+      this.userInitials = this.profileService.getInitials(this.currentUser.displayName);
+      this.friendsCount = this.currentUser.friendsCount || 0;
+      this.postsCount = this.currentUser.postsCount || 0;
+      
+      // Cargar datos adicionales del perfil desde Firebase
+      this.loadAboutInfo();
+      this.loadInterests();
+      this.loadPosts();
+      this.loadFriends();
+      this.loadSuggestions();
+      
+      console.log('✅ Perfil propio cargado:', this.userName);
+    }
+  }
+
+  /**
+   * Cargar perfil de otro usuario desde Firestore
+   */
+  private loadUserProfile(userName: string): void {
+    this.profileService.getUserProfileByName(userName).subscribe({
+      next: (userData) => {
+        if (userData) {
+          this.profileUser = userData;
+          this.userName = userData.displayName;
+          this.userInitials = this.profileService.getInitials(userData.displayName);
+          this.friendsCount = userData.friendsCount || 0;
+          this.postsCount = userData.postsCount || 0;
+          
+          // Cargar datos adicionales del perfil desde Firebase
+          this.loadAboutInfo();
+          this.loadInterests();
+          this.loadPosts();
+          this.loadFriends();
+          this.loadSuggestions();
+          
+          console.log('✅ Perfil de usuario cargado:', this.userName);
+        } else {
+          console.error('❌ Usuario no encontrado');
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error al cargar perfil:', error);
+      }
+    });
+  }
+
+  /**
+   * Cargar información "Acerca de"
+   */
+  private loadAboutInfo(): void {
+    if (!this.profileUser) return;
+    
+    this.aboutInfo = [];
+    
+    // Agregar información si existe
+    if (this.profileUser.occupation) {
+      this.aboutInfo.push({
+        icon: '💼',
+        title: 'Trabajo',
+        description: this.profileUser.occupation
+      });
+    }
+    
+    if (this.profileUser.location) {
+      this.aboutInfo.push({
+        icon: '📍',
+        title: 'Ubicación',
+        description: this.profileUser.location
+      });
+    }
+    
+    if (this.profileUser.website) {
+      this.aboutInfo.push({
+        icon: '🌐',
+        title: 'Sitio web',
+        description: this.profileUser.website
+      });
+    }
+  }
+
+  /**
+   * Cargar intereses
+   * TODO: Implementar cuando tengas la colección de interests en Firebase
+   */
+  private loadInterests(): void {
+    // Por ahora vacío, se puede implementar después
+    this.interests = [];
+  }
+
+  /**
+   * Cargar posts del usuario
+   * TODO: Implementar cuando tengas los posts en Firebase
+   */
+  private loadPosts(): void {
+    // Por ahora vacío, se implementará con el servicio de posts
+    this.posts = [];
+  }
+
+  /**
+   * Cargar amigos
+   * TODO: Implementar con el FriendService
+   */
+  private loadFriends(): void {
+    // Por ahora vacío, se puede implementar con FriendService.getFriends()
+    this.friends = [];
+  }
+
+  /**
+   * Cargar sugerencias
+   * TODO: Implementar con el FriendService
+   */
+  private loadSuggestions(): void {
+    // Por ahora vacío, se puede implementar con FriendService.getSuggestions()
+    this.suggestions = [];
   }
 
   /**
    * Obtiene las iniciales del nombre del usuario
    */
   getInitials(displayName: string): string {
-    if (!displayName) return '??';
-    
-    const names = displayName.trim().split(' ');
-    if (names.length >= 2) {
-      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-    }
-    return displayName.substring(0, 2).toUpperCase();
+    return this.profileService.getInitials(displayName);
   }
 
   onTabChange(tabId: string): void {
@@ -222,11 +235,23 @@ export class UserProfile implements OnInit, OnDestroy {
   }
 
   openCreatePostModal(): void {
+    // Solo permitir crear posts en el perfil propio
+    if (!this.isOwnProfile) {
+      console.log('⚠️ No puedes crear posts en el perfil de otro usuario');
+      return;
+    }
+    
     this.editingPostId = null;
     this.createPostModal.open();
   }
 
   onEdit(post: Post): void {
+    // Solo permitir editar posts propios
+    if (!this.isOwnProfile) {
+      console.log('⚠️ No puedes editar posts de otro usuario');
+      return;
+    }
+    
     this.editingPostId = post.id;
     this.createPostModal.open(post.content);
     console.log('Editando post:', post.id);

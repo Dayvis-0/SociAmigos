@@ -1,7 +1,7 @@
 // src/app/shared/components/sidebar-left/sidebar-left.ts
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { FriendService } from '../../../core/services/friend.service';
 import { User } from '../../../core/models/user.model';

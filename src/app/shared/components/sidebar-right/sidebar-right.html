@@ -10,14 +10,14 @@
     <a routerLink="/profile" class="profile-name">{{ userName || 'Usuario' }}</a>
     <div class="profile-bio">{{ userBio || 'Sin biografía' }}</div>
     <div class="profile-stats">
-      <div class="profile-stat">
+      <a routerLink="/friends" class="profile-stat">
         <div class="profile-stat-value">{{ friendsCount }}</div>
         <div class="profile-stat-label">Amigos</div>
-      </div>
-      <div class="profile-stat">
+      </a>
+      <a routerLink="/profile" class="profile-stat">
         <div class="profile-stat-value">{{ postsCount }}</div>
         <div class="profile-stat-label">Publicaciones</div>
-      </div>
+      </a>
     </div>
   </div>
 
@@ -35,7 +35,11 @@
 
     <!-- Online Users List -->
     <div *ngIf="!loadingOnlineUsers && onlineUsers.length > 0">
-      <div *ngFor="let user of onlineUsers" class="suggestion-item">
+      <a 
+        *ngFor="let user of onlineUsers" 
+        [routerLink]="['/profile', user.userId]"
+        class="suggestion-item"
+      >
         <div class="online-avatar-container">
           <div 
             class="suggestion-avatar"
@@ -50,7 +54,7 @@
           <div class="suggestion-name">{{ user.name }}</div>
           <div class="suggestion-mutual">Conectado ahora</div>
         </div>
-      </div>
+      </a>
     </div>
 
     <!-- Empty State -->

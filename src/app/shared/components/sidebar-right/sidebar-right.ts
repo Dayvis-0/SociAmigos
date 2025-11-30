@@ -1,7 +1,7 @@
 // src/app/shared/components/sidebar-right/sidebar-right.ts
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { FriendService } from '../../../core/services/friend.service';
 import { User } from '../../../core/models/user.model';
@@ -26,6 +26,7 @@ interface OnlineUser {
 export class SidebarRight implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private friendService = inject(FriendService);
+  private router = inject(Router);
 
   currentUser: User | null = null;
   userInitials: string = '';
@@ -100,6 +101,26 @@ export class SidebarRight implements OnInit, OnDestroy {
         this.loadingOnlineUsers = false;
       }
     });
+  }
+
+  /**
+   * Navegar al perfil de un usuario
+   */
+  navigateToProfile(userId: string): void {
+    // Buscar el nombre del usuario en la lista
+    const user = this.onlineUsers.find(u => u.userId === userId);
+    
+    if (user) {
+      const userName = user.name;
+      console.log('🔗 Navegando al perfil de:', userName);
+      
+      this.router.navigate(['/profile', userName]).then(
+        success => console.log('✅ Navegación exitosa:', success),
+        error => console.error('❌ Error en navegación:', error)
+      );
+    } else {
+      console.error('❌ Usuario no encontrado en la lista');
+    }
   }
 
   /**
