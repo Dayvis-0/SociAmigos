@@ -1,10 +1,10 @@
 import { Component, ViewChild, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProfileHeader } from '../../components/profile-header/profile-header';
-import { NavbarComponent } from '../../../../shared/components/navbar/navbar';
-import { CreatePostModalComponent } from '../../../home/components/create-post-modal/create-post-modal'; 
-import { CommentSectionComponent } from '../../../home/components/comment-section/comment-section';
-import { LikeButtonComponent } from '../../../home/components/like-button/like-button'; 
+import { Navbar } from '../../../../shared/components/navbar/navbar';
+import { CreatePostModal } from '../../../home/components/create-post-modal/create-post-modal'; 
+import { CommentSection } from '../../../home/components/comment-section/comment-section';
+import { LikeButton } from '../../../home/components/like-button/like-button'; 
 import { AuthService } from '../../../../core/services/auth.service';
 import { User } from '../../../../core/models/user.model';
 import { Subscription } from 'rxjs';
@@ -57,10 +57,10 @@ interface Video {
   imports: [
     CommonModule, 
     ProfileHeader, 
-    NavbarComponent,
-    CreatePostModalComponent,
-    CommentSectionComponent,
-    LikeButtonComponent
+    Navbar,
+    CreatePostModal,
+    CommentSection,
+    LikeButton
   ],
   templateUrl: './user-profile.html',
   styleUrl: './user-profile.css'
@@ -68,7 +68,7 @@ interface Video {
 export class UserProfile implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   
-  @ViewChild(CreatePostModalComponent) createPostModal!: CreatePostModalComponent;
+  @ViewChild(CreatePostModal) createPostModal!: CreatePostModal;
 
   activeTab: string = 'publicaciones';
   editingPostId: number | null = null;

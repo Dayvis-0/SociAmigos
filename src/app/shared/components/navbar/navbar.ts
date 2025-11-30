@@ -13,7 +13,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './navbar.html',
   styleUrl: './navbar.css'
 })
-export class NavbarComponent implements OnInit, OnDestroy {
+export class Navbar implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private router = inject(Router);
 

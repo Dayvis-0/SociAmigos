@@ -19,7 +19,7 @@ interface Comment {
   templateUrl: './comment-section.html',
   styleUrl: './comment-section.css'
 })
-export class CommentSectionComponent {
+export class CommentSection {
   @Input() postId!: number;
   @Input() commentsCount: number = 0;
   

@@ -18,7 +18,7 @@ interface OnlineUser {
   templateUrl: './sidebar-right.html',
   styleUrl: './sidebar-right.css'
 })
-export class SidebarRightComponent implements OnInit, OnDestroy {
+export class SidebarRight implements OnInit, OnDestroy {
   private authService = inject(AuthService);
 
   currentUser: User | null = null;

@@ -1,0 +1,342 @@
+// src/app/core/services/friend.service.ts
+
+import { Injectable, inject } from '@angular/core';
+import {
+  Firestore,
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp,
+  Timestamp
+} from '@angular/fire/firestore';
+import { Observable, from, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { Suggestion, Friendship } from '../models/suggestion.model';
+import { User } from '../models/user.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class FriendService {
+  private firestore = inject(Firestore);
+  private friendsCollection = collection(this.firestore, 'friends');
+  private suggestionsCollection = collection(this.firestore, 'suggestions');
+  private usersCollection = collection(this.firestore, 'users');
+
+  // ==================== SUGERENCIAS ====================
+  
+  /**
+   * Obtener sugerencias de amigos para un usuario
+   */
+  getSuggestions(userId: string, limitCount: number = 10): Observable<Suggestion[]> {
+    const q = query(
+      this.suggestionsCollection,
+      where('userId', '==', userId),
+      orderBy('mutualFriends', 'desc'),
+      limit(limitCount)
+    );
+
+    return from(getDocs(q)).pipe(
+      map(snapshot => {
+        return snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            suggestionId: doc.id,
+            ...data,
+            createdAt: this.convertToTimestamp(data['createdAt'])
+          } as Suggestion;
+        });
+      }),
+      catchError(error => {
+        console.error('❌ Error al obtener sugerencias:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Generar sugerencias aleatorias basadas en usuarios existentes
+   * (Para desarrollo - en producción esto sería más sofisticado)
+   */
+  async generateSuggestions(userId: string, limitCount: number = 3): Promise<Suggestion[]> {
+    try {
+      // Obtener usuarios aleatorios que no sean amigos
+      const usersQuery = query(this.usersCollection, limit(20));
+      const usersSnapshot = await getDocs(usersQuery);
+      
+      const suggestions: Suggestion[] = [];
+      
+      for (const userDoc of usersSnapshot.docs) {
+        if (userDoc.id === userId) continue; // Saltear el usuario actual
+        
+        const userData = userDoc.data() as User;
+        
+        // Verificar si ya son amigos
+        const areFriends = await this.areFriends(userId, userDoc.id);
+        if (areFriends) continue;
+        
+        // Crear sugerencia
+        const suggestion: Suggestion = {
+          suggestionId: '',
+          userId: userId,
+          suggestedUserId: userDoc.id,
+          suggestedUserName: userData.displayName,
+          suggestedUserInitials: this.getInitials(userData.displayName),
+          suggestedUserPhotoURL: userData.photoURL,
+          mutualFriends: Math.floor(Math.random() * 10), // Random para desarrollo
+          reason: 'random',
+          createdAt: Timestamp.now()
+        };
+        
+        suggestions.push(suggestion);
+        
+        if (suggestions.length >= limitCount) break;
+      }
+      
+      return suggestions;
+    } catch (error) {
+      console.error('❌ Error al generar sugerencias:', error);
+      return [];
+    }
+  }
+
+  // ==================== SOLICITUDES DE AMISTAD ====================
+  
+  /**
+   * Enviar solicitud de amistad
+   */
+  async sendFriendRequest(fromUserId: string, toUserId: string): Promise<void> {
+    try {
+      // Verificar si ya existe una solicitud o amistad
+      const existingFriendship = await this.getFriendship(fromUserId, toUserId);
+      
+      if (existingFriendship) {
+        console.log('⚠️ Ya existe una relación de amistad');
+        return;
+      }
+
+      // Crear nueva solicitud
+      const friendshipData = {
+        userId1: fromUserId,
+        userId2: toUserId,
+        status: 'pending',
+        requestedBy: fromUserId,
+        requestedTo: toUserId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      const docRef = await addDoc(this.friendsCollection, friendshipData);
+      await updateDoc(docRef, { friendshipId: docRef.id });
+
+      console.log('✅ Solicitud de amistad enviada');
+    } catch (error) {
+      console.error('❌ Error al enviar solicitud:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Aceptar solicitud de amistad
+   */
+  async acceptFriendRequest(friendshipId: string): Promise<void> {
+    try {
+      const docRef = doc(this.firestore, 'friends', friendshipId);
+      await updateDoc(docRef, {
+        status: 'accepted',
+        updatedAt: serverTimestamp()
+      });
+
+      console.log('✅ Solicitud de amistad aceptada');
+    } catch (error) {
+      console.error('❌ Error al aceptar solicitud:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Rechazar solicitud de amistad
+   */
+  async rejectFriendRequest(friendshipId: string): Promise<void> {
+    try {
+      const docRef = doc(this.firestore, 'friends', friendshipId);
+      await updateDoc(docRef, {
+        status: 'rejected',
+        updatedAt: serverTimestamp()
+      });
+
+      console.log('✅ Solicitud de amistad rechazada');
+    } catch (error) {
+      console.error('❌ Error al rechazar solicitud:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Eliminar amistad
+   */
+  async removeFriend(friendshipId: string): Promise<void> {
+    try {
+      const docRef = doc(this.firestore, 'friends', friendshipId);
+      await deleteDoc(docRef);
+
+      console.log('✅ Amistad eliminada');
+    } catch (error) {
+      console.error('❌ Error al eliminar amistad:', error);
+      throw error;
+    }
+  }
+
+  // ==================== CONSULTAS ====================
+  
+  /**
+   * Verificar si dos usuarios son amigos
+   */
+  async areFriends(userId1: string, userId2: string): Promise<boolean> {
+    try {
+      const q1 = query(
+        this.friendsCollection,
+        where('userId1', '==', userId1),
+        where('userId2', '==', userId2),
+        where('status', '==', 'accepted')
+      );
+
+      const q2 = query(
+        this.friendsCollection,
+        where('userId1', '==', userId2),
+        where('userId2', '==', userId1),
+        where('status', '==', 'accepted')
+      );
+
+      const [snapshot1, snapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
+
+      return !snapshot1.empty || !snapshot2.empty;
+    } catch (error) {
+      console.error('❌ Error al verificar amistad:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Obtener relación de amistad entre dos usuarios
+   */
+  async getFriendship(userId1: string, userId2: string): Promise<Friendship | null> {
+    try {
+      const q1 = query(
+        this.friendsCollection,
+        where('userId1', '==', userId1),
+        where('userId2', '==', userId2)
+      );
+
+      const q2 = query(
+        this.friendsCollection,
+        where('userId1', '==', userId2),
+        where('userId2', '==', userId1)
+      );
+
+      const [snapshot1, snapshot2] = await Promise.all([
+        getDocs(q1),
+        getDocs(q2)
+      ]);
+
+      const doc = snapshot1.docs[0] || snapshot2.docs[0];
+      
+      if (doc) {
+        const data = doc.data();
+        return {
+          friendshipId: doc.id,
+          ...data,
+          createdAt: this.convertToTimestamp(data['createdAt']),
+          updatedAt: this.convertToTimestamp(data['updatedAt'])
+        } as Friendship;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ Error al obtener amistad:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener lista de amigos de un usuario
+   */
+  getFriends(userId: string): Observable<User[]> {
+    const q1 = query(
+      this.friendsCollection,
+      where('userId1', '==', userId),
+      where('status', '==', 'accepted')
+    );
+
+    const q2 = query(
+      this.friendsCollection,
+      where('userId2', '==', userId),
+      where('status', '==', 'accepted')
+    );
+
+    return from(Promise.all([getDocs(q1), getDocs(q2)])).pipe(
+      map(async ([snapshot1, snapshot2]) => {
+        const friendIds: string[] = [];
+        
+        snapshot1.docs.forEach(doc => {
+          const data = doc.data();
+          friendIds.push(data['userId2']);
+        });
+        
+        snapshot2.docs.forEach(doc => {
+          const data = doc.data();
+          friendIds.push(data['userId1']);
+        });
+
+        // Obtener datos de los amigos
+        const friends: User[] = [];
+        for (const friendId of friendIds) {
+          const userDoc = await getDoc(doc(this.firestore, 'users', friendId));
+          if (userDoc.exists()) {
+            friends.push(userDoc.data() as User);
+          }
+        }
+
+        return friends;
+      }),
+      switchMap(promise => from(promise)),
+      catchError(error => {
+        console.error('❌ Error al obtener amigos:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // ==================== HELPERS ====================
+  
+  private convertToTimestamp(value: any): Timestamp {
+    if (!value) return Timestamp.now();
+    if (value instanceof Timestamp) return value;
+    if (value.toDate) return Timestamp.fromDate(value.toDate());
+    if (value instanceof Date) return Timestamp.fromDate(value);
+    return Timestamp.now();
+  }
+
+  private getInitials(name: string): string {
+    if (!name) return '??';
+    const names = name.trim().split(' ');
+    if (names.length >= 2) {
+      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+}
+
+// Agregar switchMap al import de rxjs/operators
+import { switchMap } from 'rxjs/operators';

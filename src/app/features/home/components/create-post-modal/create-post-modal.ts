@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './create-post-modal.html',
   styleUrl: './create-post-modal.css'
 })
-export class CreatePostModalComponent implements OnInit, OnDestroy {
+export class CreatePostModal implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   
   @Output() closeModal = new EventEmitter<void>();

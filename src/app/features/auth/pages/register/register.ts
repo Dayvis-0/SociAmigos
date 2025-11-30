@@ -11,7 +11,7 @@ import { AuthService } from '../../../../core/services/auth.service';
   templateUrl: './register.html',
   styleUrls: ['./register.css']
 })
-export class RegisterComponent implements OnInit {
+export class Register implements OnInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private authService = inject(AuthService);

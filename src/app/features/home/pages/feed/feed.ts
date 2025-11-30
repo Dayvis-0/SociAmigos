@@ -1,27 +1,22 @@
+// src/app/features/home/pages/feed/feed.ts
 import { Component, ViewChild, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CreatePostModalComponent } from '../../components/create-post-modal/create-post-modal';
-import { CommentSectionComponent } from '../../components/comment-section/comment-section';
-import { NavbarComponent } from '../../../../shared/components/navbar/navbar';
-import { SidebarLeftComponent } from '../../../../shared/components/sidebar-left/sidebar-left';
-import { SidebarRightComponent } from '../../../../shared/components/sidebar-right/sidebar-right';
-import { LikeButtonComponent } from '../../components/like-button/like-button';
+import { CreatePostModal } from '../../components/create-post-modal/create-post-modal';
+import { CommentSection } from '../../components/comment-section/comment-section';
+import { Navbar } from '../../../../shared/components/navbar/navbar';
+import { SidebarLeft } from '../../../../shared/components/sidebar-left/sidebar-left';
+import { SidebarRight } from '../../../../shared/components/sidebar-right/sidebar-right';
+import { LikeButton } from '../../components/like-button/like-button';
 import { AuthService } from '../../../../core/services/auth.service';
+import { PostService } from '../../../../core/services/post.service';
 import { User } from '../../../../core/models/user.model';
+import { Post } from '../../../../core/models/post.model';
 import { Subscription } from 'rxjs';
+import { Timestamp } from '@angular/fire/firestore';
 
-interface Post {
-  id: number;
-  author: string;
-  initials: string;
-  time: string;
-  content: string;
-  hasImage: boolean;
-  imageEmoji?: string;
-  likes: number;
-  comments: number;
-  liked: boolean;
-  avatarClass: string;
+interface PostUI extends Post {
+  timeAgo: string;
+  isLikedByCurrentUser: boolean;
 }
 
 @Component({
@@ -29,80 +24,30 @@ interface Post {
   standalone: true,
   imports: [
     CommonModule,
-    NavbarComponent,
-    SidebarLeftComponent,
-    SidebarRightComponent,
-    CreatePostModalComponent,
-    CommentSectionComponent,
-    LikeButtonComponent,
-
+    Navbar,
+    SidebarLeft,
+    SidebarRight,
+    CreatePostModal,
+    CommentSection,
+    LikeButton,
   ],
   templateUrl: './feed.html',
   styleUrl: './feed.css'
 })
-export class FeedComponent implements OnInit, OnDestroy {
+export class Feed implements OnInit, OnDestroy {
   private authService = inject(AuthService);
+  private postService = inject(PostService);
   
-  @ViewChild(CreatePostModalComponent) createPostModal!: CreatePostModalComponent;
+  @ViewChild(CreatePostModal) createPostModal!: CreatePostModal;
 
   currentUser: User | null = null;
   currentUserInitials: string = '';
+  posts: PostUI[] = [];
+  loading: boolean = true;
+  
   private userSubscription?: Subscription;
-
-  posts: Post[] = [
-    {
-      id: 1,
-      author: 'María González',
-      initials: 'MG',
-      time: 'Hace 2 horas',
-      content: '¡Acabo de terminar mi nuevo proyecto web! Estoy muy emocionada de compartirlo con todos ustedes. Ha sido un viaje increíble de aprendizaje 🚀',
-      hasImage: true,
-      imageEmoji: '🎨',
-      likes: 24,
-      comments: 5,
-      liked: true,
-      avatarClass: ''
-    },
-    {
-      id: 2,
-      author: 'Juan Rodríguez',
-      initials: 'JR',
-      time: 'Hace 5 horas',
-      content: 'Buenos días a todos! ☀️ Comenzando el día con mucha energía. ¿Qué planes tienen para hoy?',
-      hasImage: false,
-      likes: 18,
-      comments: 12,
-      liked: false,
-      avatarClass: 'alt1'
-    },
-    {
-      id: 3,
-      author: 'Laura Castro',
-      initials: 'LC',
-      time: 'Hace 8 horas',
-      content: 'Compartiendo algunas fotos de mi viaje reciente. ¡Fue una experiencia maravillosa! 🌍✈️',
-      hasImage: true,
-      imageEmoji: '📷',
-      likes: 45,
-      comments: 8,
-      liked: false,
-      avatarClass: 'alt2'
-    },
-    {
-      id: 4,
-      author: 'Carlos Martínez',
-      initials: 'CM',
-      time: 'Hace 1 día',
-      content: 'Reflexionando sobre la importancia de la tecnología en nuestras vidas. ¿Qué opinan ustedes? 💭',
-      hasImage: false,
-      likes: 32,
-      comments: 15,
-      liked: false,
-      avatarClass: 'alt3'
-    }
-  ];
-
-  private editingPostId: number | null = null;
+  private postsSubscription?: Subscription;
+  private editingPostId: string | null = null;
 
   ngOnInit(): void {
     // Suscribirse al usuario actual
@@ -110,17 +55,150 @@ export class FeedComponent implements OnInit, OnDestroy {
       this.currentUser = user;
       if (user) {
         this.currentUserInitials = this.getInitials(user.displayName);
+        this.loadPosts();
       }
     });
   }
 
   ngOnDestroy(): void {
-    // Limpiar suscripción
     this.userSubscription?.unsubscribe();
+    this.postsSubscription?.unsubscribe();
   }
 
   /**
-   * Obtiene las iniciales del nombre del usuario
+   * Cargar posts desde Firebase
+   */
+  loadPosts(): void {
+    this.loading = true;
+    
+    this.postsSubscription = this.postService.getAllPosts(50).subscribe({
+      next: (posts) => {
+        this.posts = posts.map(post => ({
+          ...post,
+          timeAgo: this.getTimeAgo(post.fecha),
+          isLikedByCurrentUser: this.currentUser ? 
+            post.likedBy.includes(this.currentUser.userId) : false
+        }));
+        this.loading = false;
+        console.log('✅ Posts cargados:', this.posts.length);
+      },
+      error: (error) => {
+        console.error('❌ Error al cargar posts:', error);
+        this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Abrir modal para crear nuevo post
+   */
+  openCreatePostModal(): void {
+    this.editingPostId = null;
+    this.createPostModal.open();
+  }
+  
+  /**
+   * Publicar o editar post
+   */
+  async onPublishPost(data: {content: string, imageUrl?: string}): Promise<void> {
+    if (!this.currentUser) {
+      console.error('❌ No hay usuario autenticado');
+      return;
+    }
+
+    try {
+      if (this.editingPostId) {
+        // Editar post existente
+        await this.postService.updatePost(this.editingPostId, {
+          contenido: data.content,
+          imagenUrl: data.imageUrl
+        });
+        console.log('✅ Post actualizado');
+        this.editingPostId = null;
+      } else {
+        // Crear nuevo post
+        await this.postService.createPost(
+          this.currentUser.userId,
+          this.currentUser.displayName,
+          this.currentUserInitials,
+          this.currentUser.photoURL,
+          {
+            contenido: data.content,
+            imagenUrl: data.imageUrl
+          }
+        );
+        console.log('✅ Post creado');
+      }
+
+      // Recargar posts
+      this.loadPosts();
+    } catch (error) {
+      console.error('❌ Error al publicar post:', error);
+    }
+  }
+
+  /**
+   * Dar/quitar like a un post
+   */
+  async toggleLike(post: PostUI): Promise<void> {
+    if (!this.currentUser) {
+      console.error('❌ No hay usuario autenticado');
+      return;
+    }
+
+    try {
+      await this.postService.toggleLike(post.postId, this.currentUser.userId);
+      
+      // Actualizar UI localmente
+      post.isLikedByCurrentUser = !post.isLikedByCurrentUser;
+      post.likes += post.isLikedByCurrentUser ? 1 : -1;
+      
+      if (post.isLikedByCurrentUser) {
+        post.likedBy.push(this.currentUser.userId);
+      } else {
+        post.likedBy = post.likedBy.filter(id => id !== this.currentUser!.userId);
+      }
+    } catch (error) {
+      console.error('❌ Error al dar/quitar like:', error);
+    }
+  }
+
+  /**
+   * Editar un post
+   */
+  onEdit(post: PostUI): void {
+    // Solo permitir editar si es el autor
+    if (this.currentUser && post.autorId === this.currentUser.userId) {
+      this.editingPostId = post.postId;
+      this.createPostModal.open(post.contenido);
+      console.log('✏️ Editando post:', post.postId);
+    } else {
+      console.warn('⚠️ No tienes permiso para editar este post');
+    }
+  }
+
+  /**
+   * Eliminar un post
+   */
+  async deletePost(post: PostUI): Promise<void> {
+    if (!this.currentUser || post.autorId !== this.currentUser.userId) {
+      console.warn('⚠️ No tienes permiso para eliminar este post');
+      return;
+    }
+
+    if (confirm('¿Estás seguro de eliminar esta publicación?')) {
+      try {
+        await this.postService.deletePost(post.postId);
+        console.log('✅ Post eliminado');
+        this.loadPosts();
+      } catch (error) {
+        console.error('❌ Error al eliminar post:', error);
+      }
+    }
+  }
+
+  /**
+   * Obtener iniciales del nombre
    */
   getInitials(displayName: string): string {
     if (!displayName) return '??';
@@ -132,57 +210,32 @@ export class FeedComponent implements OnInit, OnDestroy {
     return displayName.substring(0, 2).toUpperCase();
   }
 
-  openCreatePostModal(): void {
-    this.editingPostId = null;
-    this.createPostModal.open();
-  }
-  
-  onPublishPost(data: {content: string, imageUrl?: string}): void {
-    if (this.editingPostId) {
-      // Editar post existente
-      const postIndex = this.posts.findIndex(p => p.id === this.editingPostId);
-      if (postIndex !== -1) {
-        this.posts[postIndex].content = data.content;
-        this.posts[postIndex].time = 'Editado justo ahora';
-        if (data.imageUrl) {
-          this.posts[postIndex].hasImage = true;
-          this.posts[postIndex].imageEmoji = '🖼️';
-        }
-        console.log('Publicación editada:', this.posts[postIndex]);
-      }
-      this.editingPostId = null;
-    } else {
-      // Crear nuevo post con los datos del usuario autenticado
-      const newPost: Post = {
-        id: Date.now(),
-        author: this.currentUser?.displayName || 'Usuario',
-        initials: this.currentUserInitials || '??',
-        time: 'Justo ahora',
-        content: data.content,
-        hasImage: !!data.imageUrl,
-        imageEmoji: data.imageUrl ? '🖼️' : undefined,
-        likes: 0,
-        comments: 0,
-        liked: false,
-        avatarClass: ''
-      };
-      
-      this.posts.unshift(newPost);
-      console.log('Nueva publicación creada:', newPost);
-    }
+  /**
+   * Calcular tiempo transcurrido
+   */
+  getTimeAgo(timestamp: Timestamp): string {
+    const now = new Date();
+    const postDate = timestamp.toDate();
+    const diffMs = now.getTime() - postDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Justo ahora';
+    if (diffMins < 60) return `Hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
+    if (diffHours < 24) return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+    if (diffDays < 7) return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+    
+    return postDate.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
-  toggleLike(post: Post): void {
-    post.liked = !post.liked;
-    post.likes += post.liked ? 1 : -1;
-  }
-
-  onEdit(post: Post): void {
-    this.editingPostId = post.id;
-    this.createPostModal.open(post.content);
-    console.log('Editando post:', post.id);
-  }
-
+  /**
+   * Placeholder del input
+   */
   get placeholderText(): string {
     const name = this.currentUser?.displayName || '';
     const firstName = name.split(' ')[0] || 'Usuario';

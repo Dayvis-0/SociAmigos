@@ -17,44 +17,83 @@
       </div>
     </div>
 
+    <!-- LOADING -->
+    <div *ngIf="loading" class="loading-posts">
+      <div class="spinner"></div>
+      <p>Cargando publicaciones...</p>
+    </div>
+
     <!-- POSTS -->
     <article *ngFor="let post of posts" class="post">
       <div class="post-header">
-        <div class="post-avatar" [ngClass]="post.avatarClass">
-          {{ post.initials }}
+        <div class="post-avatar" [style.background-image]="post.autorPhotoURL ? 'url(' + post.autorPhotoURL + ')' : 'none'">
+          <span *ngIf="!post.autorPhotoURL">{{ post.autorInitials }}</span>
         </div>
         <div class="post-info">
-          <div class="post-author">{{ post.author }}</div>
-          <div class="post-time">{{ post.time }}</div>
+          <div class="post-author">{{ post.autorName }}</div>
+          <div class="post-time">{{ post.timeAgo }}</div>
         </div>
-        <div class="post-menu" (click)="onEdit(post)">⋯</div>
+        
+        <!-- Mostrar menú solo si es el autor -->
+        <div 
+          *ngIf="currentUser && post.autorId === currentUser.userId" 
+          class="post-menu" 
+          (click)="onEdit(post)"
+        >
+          ⋯
+        </div>
       </div>
 
-      <div class="post-content">{{ post.content }}</div>
+      <div class="post-content">{{ post.contenido }}</div>
 
-      <div *ngIf="post.hasImage" class="post-image">
-        {{ post.imageEmoji }}
+      <div *ngIf="post.imagenUrl" class="post-image">
+        <img [src]="post.imagenUrl" [alt]="'Imagen de ' + post.autorName">
+      </div>
+
+      <div class="post-stats">
+        <span class="post-likes">{{ post.likes }} Me gusta</span>
+        <span class="post-comments">{{ post.commentsCount }} Comentarios</span>
       </div>
 
       <div class="post-actions">
         <app-like-button
-          [liked]="post.liked"
+          [liked]="post.isLikedByCurrentUser"
           [likesCount]="post.likes"
           [showCount]="false"
           (likeToggle)="toggleLike(post)"
         ></app-like-button>
-        <button class="post-action" (click)="onEdit(post)">
+        
+        <button 
+          *ngIf="currentUser && post.autorId === currentUser.userId" 
+          class="post-action" 
+          (click)="onEdit(post)"
+        >
           <span>✏️</span>
           <span>Editar</span>
+        </button>
+
+        <button 
+          *ngIf="currentUser && post.autorId === currentUser.userId" 
+          class="post-action post-action-delete" 
+          (click)="deletePost(post)"
+        >
+          <span>🗑️</span>
+          <span>Eliminar</span>
         </button>
       </div>
 
       <!-- COMMENT SECTION -->
       <app-comment-section 
-        [postId]="post.id" 
-        [commentsCount]="post.comments"
+        [commentsCount]="post.commentsCount"
       ></app-comment-section>
     </article>
+
+    <!-- EMPTY STATE -->
+    <div *ngIf="!loading && posts.length === 0" class="empty-state">
+      <p>📭</p>
+      <h3>No hay publicaciones aún</h3>
+      <p>¡Sé el primero en compartir algo!</p>
+    </div>
 
   </main>
 

@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   templateUrl: './footer.html',
   styleUrls: ['./footer.css']
 })
-export class FooterComponent {
+export class Footer {
   currentYear: number = new Date().getFullYear();
   
   footerLinks = [

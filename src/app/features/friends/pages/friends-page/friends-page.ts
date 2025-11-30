@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NavbarComponent } from '../../../../shared/components/navbar/navbar';
+import { Navbar } from '../../../../shared/components/navbar/navbar';
 
 interface Friend {
   initials: string;
@@ -13,7 +13,7 @@ interface Friend {
 @Component({
   selector: 'app-friends-page',
   standalone: true,
-  imports: [CommonModule, NavbarComponent, FormsModule],
+  imports: [CommonModule, Navbar, FormsModule],
   templateUrl: './friends-page.html',
   styleUrl: './friends-page.css'
 })

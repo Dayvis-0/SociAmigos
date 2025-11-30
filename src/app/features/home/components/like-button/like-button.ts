@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   templateUrl: './like-button.html',
   styleUrls: ['./like-button.css']
 })
-export class LikeButtonComponent {
+export class LikeButton {
   @Input() liked: boolean = false;
   @Input() likesCount: number = 0;
   @Input() showCount: boolean = true;

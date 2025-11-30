@@ -12,7 +12,7 @@ import { AuthFooter } from '../../../../shared/components/auth-footer/auth-foote
   templateUrl: './login.html',
   styleUrls: ['./login.css']
 })
-export class LoginComponent {
+export class Login {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private authService = inject(AuthService);

@@ -16,7 +16,7 @@ export const routes: Routes = [
   {
     path: 'feed',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/home/pages/feed/feed').then(m => m.FeedComponent)
+    loadComponent: () => import('./features/home/pages/feed/feed').then(m => m.Feed)
   },
   {
     path: 'profile',

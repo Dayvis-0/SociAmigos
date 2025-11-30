@@ -12,7 +12,7 @@ import { AuthFooter } from '../../../../shared/components/auth-footer/auth-foote
   templateUrl: './forgot-password.html',
   styleUrls: ['./forgot-password.css']
 })
-export class ForgotPasswordComponent {
+export class ForgotPassword {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private authService = inject(AuthService);
